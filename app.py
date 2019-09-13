@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from flask import Flask, render_template, url_for
+from flask import Flask, render_template, url_for, redirect, request
 from itertools import islice
 from pprint import pprint
 import dateutil.parser
@@ -31,16 +31,31 @@ find_more_props = {
     'P495': 'country of origin',
     'P127': 'owned by',
     'P179': 'part of the series',
+    'P921': 'main subject',
+    'P186': 'material used',
+    'P88': 'commissioned by',
+    'P1028': 'donated by',
+    'P1071': 'location of final assembly',
+    'P138': 'named after',
+    'P1433': 'published in',
+    'P144': 'based on',
+    'P2079': 'fabrication method',
+    'P2348': 'time period',
+    'P361': 'part of',
+    'P608': 'exhibition history',
+
     # possible future props
     # 'P571': 'inception',
-    # 'P921': 'main subject',
+    # 'P166': 'award received', (only 2)
+    # 'P1419': 'shape',  (only 2)
+    # 'P123': 'publisher', (only 1)
 }
 
 find_more_query = '''
 select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?time ?timeprecision {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
   ?item wdt:P31 wd:Q3305213 .
-  ?item wdt:PID wd:QID .
+  PARAMS
   ?item wdt:P18 ?image .
   OPTIONAL {
     ?item p:P571/psv:P571 ?timenode .
@@ -51,6 +66,37 @@ select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?time ?timeprecision 
   OPTIONAL { ?item wdt:P170 ?artist }
   FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
 }
+'''
+
+facet_query = '''
+select ?property ?object ?objectLabel (count(*) as ?count) {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?item wdt:P31 wd:Q3305213 .
+  ?item wdt:P18 ?image .
+  PARAMS
+  values ?property { PROPERTY_LIST }
+  ?item ?property ?object .
+  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
+} group by ?property ?propertyLabel ?object ?objectLabel
+'''
+
+property_query = '''
+select ?object ?objectLabel ?objectDescription (count(*) as ?count) {
+  ?item wdt:P31 wd:Q3305213 .
+  ?item wdt:P18 ?image .
+  ?item wdt:PID ?object .
+  filter not exists { ?item wdt:P180 ?depicts }
+  optional {
+    ?object rdfs:label ?objectLabel.
+    FILTER(LANG(?objectLabel) = "en").
+  }
+  optional {
+    ?object schema:description ?objectDescription .
+    filter(lang(?objectDescription) = "en")
+  }
+
+} group by ?object ?objectLabel ?objectDescription
+order by desc(?count)
 '''
 
 def ordinal(n):
@@ -107,12 +153,39 @@ def get_entities(ids, **params):
 
 @app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template('index.html', props=find_more_props)
+
+def run_query_with_cache(q, name):
+    filename = f'cache/{name}.json'
+    if os.path.exists(filename):
+        bindings = json.load(open(filename))
+    else:
+        r = run_wikidata_query(q)
+        bindings = r.json()['results']['bindings']
+        json.dump(bindings, open(filename, 'w'), indent=2)
+
+    return bindings
+
+
+@app.route("/property/P<int:property_id>")
+def property_query_page(property_id):
+    pid = f'P{property_id}'
+    q = property_query.replace('PID', pid)
+
+    open(f'cache/{pid}_query.sparql', 'w').write(q)
+    rows = run_query_with_cache(q, name=pid)
+    label = find_more_props[pid]
+
+    return render_template('property.html', label=label, pid=pid, rows=rows)
 
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
     return render_template('item.html', qid=qid)
+
+def get_en_label(entity):
+    if 'en' in entity['labels']:
+        return entity['labels']['en']['value']
 
 def get_labels(keys, name=None):
     keys = sorted(keys, key=lambda i: int(i[1:]))
@@ -128,7 +201,7 @@ def get_labels(keys, name=None):
         json.dump(labels, open(filename, 'w'), indent=2)
 
     try:
-        return {prop['id']: prop['labels']['en']['value'] for prop in labels}
+        return {prop['id']: get_en_label(prop) or '[ label missing ]' for prop in labels}
     except TypeError:
         pprint(labels)
         raise
@@ -189,8 +262,6 @@ def image_detail_old(filenames, thumbwidth=None):
         esc = f.replace('"', '&quot;')
 
         xml = xml.replace(f'name="{f}"', f'name="{esc}"')
-
-    # print(xml)
 
     root = lxml.etree.fromstring(xml.encode('utf-8'))
 
@@ -280,20 +351,64 @@ def next_page(item_id):
 def find_more_page(property_id, item_id):
     pid, qid = f'P{property_id}', f'Q{item_id}'
 
-    item_entity = get_entity_with_cache(qid)
+    return redirect(url_for('browse_page') + f'?{pid}={qid}')
 
-    property_keys = item_entity['claims'].keys()
-    property_labels = get_labels(property_keys, name=f'{qid}_property_labels')
+def get_facets(sparql_params, params):
+    flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
 
-    query = find_more_query.replace('QID', qid).replace('PID', pid)
+    property_list = ' '.join(f'wdt:{pid}' for pid in find_more_props.keys()
+                             if pid not in request.args)
 
-    filename = f'cache/{pid}_{qid}.json'
+    q = (facet_query.replace('PARAMS', sparql_params)
+                    .replace('PROPERTY_LIST', property_list))
+
+    open(f'cache/{flat}_facets_query.sparql', 'w').write(q)
+
+    bindings = run_query_with_cache(q, flat + '_facets')
+
+    facets = {key: [] for key in find_more_props.keys()}
+    for row in bindings:
+        pid = row['property']['value'].rpartition('/')[2]
+        qid = row['object']['value'].rpartition('/')[2]
+        label = row['objectLabel']['value']
+        count = int(row['count']['value'])
+
+        facets[pid].append({'qid': qid, 'label': label, 'count': count})
+
+    return {
+        key: sorted(values, key=lambda i: i['count'], reverse=True)[:15]
+        for key, values in facets.items()
+        if values
+    }
+
+@app.route('/browse')
+def browse_page():
+    params = [(pid, qid) for pid, qid in request.args.items()
+              if pid.startswith('P') and qid.startswith('Q')]
+
+    flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
+
+    # item_entity = get_entity_with_cache(qid)
+
+    item_labels = get_labels(qid for pid, qid in params)
+
+    # property_keys = item_entity['claims'].keys()
+    # property_labels = get_labels(property_keys, name=f'{flat}_property_labels')
+
+    sparql_params = ''.join(
+        f'?item wdt:{pid} wd:{qid} .\n' for pid, qid in params)
+
+    query = find_more_query.replace('PARAMS', sparql_params)
+
+    filename = f'cache/{flat}.json'
     if os.path.exists(filename):
         bindings = json.load(open(filename))
     else:
         r = run_wikidata_query(query)
         bindings = r.json()['results']['bindings']
         json.dump(bindings, open(filename, 'w'), indent=2)
+
+    facets = get_facets(sparql_params, params)
 
     page_size = 45
 
@@ -321,7 +436,6 @@ def find_more_page(property_id, item_id):
         if 'time' in row:
             t = dateutil.parser.parse(row['time']['value'])
             precision = int(row['timeprecision']['value'])
-            print((row['time']['value'], precision))
 
             if precision == 9:
                 d = t.year
@@ -358,7 +472,7 @@ def find_more_page(property_id, item_id):
 
     filenames = [cur['image_filename'] for cur in items]
 
-    filename = f'cache/{pid}_{qid}_{page_size}_images.json'
+    filename = f'cache/{flat}_{page_size}_images.json'
     if os.path.exists(filename):
         detail = json.load(open(filename))
     else:
@@ -370,11 +484,16 @@ def find_more_page(property_id, item_id):
 
     total = len(bindings)
 
+    title = ' / '.join(item_labels[qid] for pid, qid in params)
+
     return render_template('find_more.html',
-                           qid=qid,
-                           pid=pid,
-                           item_entity=item_entity,
-                           property_labels=property_labels,
+                           # qid=qid,
+                           # pid=pid,
+                           # item_entity=item_entity,
+                           # property_labels=property_labels,
+                           facets=facets,
+                           prop_labels=find_more_props,
+                           label=title,
                            labels=find_more_props,
                            bindings=bindings,
                            items=items,
