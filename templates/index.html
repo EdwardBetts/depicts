@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Wikidata painting depicts{% endblock %}
+
+{% block content %}
+<div class="m-3">
+  <ul>
+  {% for pid, label in props.items() %}
+    <li><a href="{{ url_for('property_query_page', property_id=pid[1:]) }}">{{ label }}</a>
+    ({{ pid }})
+    </li>
+  {% endfor %}
+  </ul>
+</div>
+
+{% endblock %}

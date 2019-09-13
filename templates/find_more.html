@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ label }}{% endblock %}
+
+{% block style %}
+<style>
+.card-columns { column-count: 6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="m-3">
+  <h1>{{ self.title() }}</h1>
+
+  {#
+  {% for key, label in property_labels.items() %}
+    <h4>{{ label }} ({{ key }})</h4>
+    <pre>{{ item_entity['claims'][key] | pprint }}</pre>
+  {% endfor %}
+  #}
+
+  <p>{{ '{:,d}'.format(total) }} paintings found</p>
+
+  {% for key, values in facets.items() %}
+    <p>{{ prop_labels[key] }}:
+      {% for v in values %}
+        <a href="?{{ request.query_string.decode('utf-8') }}&{{key}}={{v.qid}}">{{ v.label }}</a> ({{ v.count }})
+        {% if not loop.last %}|{% endif %}
+      {% endfor %}
+    </p>
+
+  {% endfor %}
+
+<div class="card-columns">
+  {% for item in items %}
+  {% set image = item.image %}
+  <div class="card">
+    <a href="{{ item.url }}">
+      {# <img src="{{ image.thumburl }}" height="{{ image.thumbheight }}" width="{{ image.thumbwidth }}" class="card-img-top"></a> #}
+      <img src="{{ image.thumburl }}" class="card-img-top"></a>
+    <div class="card-body">
+      <h5 class="card-title">{{ item.label }}</h5>
+      <p class="card-text">by {{ item.artist_name }}
+      {% if item.date %}({{ item.date }}){% endif %}
+      </p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{#
+  {% for item in items %}
+  <pre>{{ item | pprint }}</pre>
+  {% endfor %}
+#}
+
+</div>
+{% endblock %}

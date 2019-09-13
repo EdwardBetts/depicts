@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ label }}{% endblock %}
+
+{% block content %}
+<div class="m-3">
+  <h1>{{ self.title() }}</h1>
+
+  <p><a href="{{ url_for('index') }}">back to index</a></p>
+
+  <ul>
+  {% for row in rows if '/' in row.object.value %}
+    {% set qid = row.object.value.rpartition('/')[2] %}
+    {% set row_label = row.objectLabel.value if 'objectLabel' in row else '[ label missing ]' %}
+    <li>
+    <a href="{{ url_for('browse_page') }}?{{ pid }}={{ qid }}">{{ row_label }}</a>
+    {% if 'objectDescription' in row %}
+    &mdash; {{ row.objectDescription.value }}
+    {% endif %}
+
+    ({{ '{:,d}'.format(row.count.value | int) }} paintings)
+    {% if 'objectLabel' not in row %}
+      <a href="https://wikidata.org/wiki/{{ qid }}">view in Wikidata</a>
+    {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+</div>
+
+{% endblock %}
