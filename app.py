@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 
 from flask import Flask, render_template, url_for, redirect, request
-from itertools import islice
-from pprint import pprint
+from depicts import utils
 import dateutil.parser
 import urllib.parse
-import lxml.etree
 import requests
 import json
 import os
@@ -18,8 +16,6 @@ wikidata_url = 'https://www.wikidata.org/w/api.php'
 commons_url = 'https://www.wikidata.org/w/api.php'
 wikidata_query_api_url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
 commons_start = 'http://commons.wikimedia.org/wiki/Special:FilePath/'
-commons_api_url = 'https://tools.wmflabs.org/magnus-toolserver/commonsapi.php'
-commons_query_url = 'https://commons.wikimedia.org/w/api.php'
 thumbwidth = 300
 thumbheight = 400
 
@@ -102,25 +98,14 @@ select ?object ?objectLabel ?objectDescription (count(*) as ?count) {
 order by desc(?count)
 '''
 
-def ordinal(n):
-    return "%d%s" % (n, 'tsnrhtdd'[(n / 10 % 10 != 1) * (n % 10 < 4) * n % 10::4])
-
-def chunk(it, size):
-    it = iter(it)
-    return iter(lambda: tuple(islice(it, size)), ())
-
 def run_wikidata_query(query):
     params = {'query': query, 'format': 'json'}
     r = requests.post(wikidata_query_api_url, data=params, stream=True)
     assert r.status_code == 200
     return r
 
-def drop_start(s, start):
-    assert s.startswith(start)
-    return s[len(start):]
-
 def row_id(row):
-    return int(drop_start(row['item']['value'], url_start))
+    return int(utils.drop_start(row['item']['value'], url_start))
 
 def api_call(params, api_url=wikidata_url):
     call_params = {
@@ -237,18 +222,13 @@ def get_labels(keys, name=None):
         if isinstance(from_cache, dict) and from_cache.get('keys') == keys:
             labels = from_cache['labels']
     if not labels:
-        for cur in chunk(keys, 50):
+        for cur in utils.chunk(keys, 50):
             labels += get_entities(cur, props='labels')
 
         json.dump({'keys': keys, 'labels': labels},
                   open(filename, 'w'), indent=2)
 
-    try:
-        return {entity['id']: get_entity_label(entity) for entity in labels}
-    except TypeError:
-        pprint(labels)
-        raise
-
+    return {entity['id']: get_entity_label(entity) for entity in labels}
 
 def get_entity_with_cache(qid):
     filename = f'cache/{qid}.json'
@@ -261,7 +241,7 @@ def get_entity_with_cache(qid):
     return entity
 
 def commons_uri_to_filename(uri):
-    return urllib.parse.unquote(drop_start(uri, commons_start))
+    return urllib.parse.unquote(utils.drop_start(uri, commons_start))
 
 def image_detail(filenames, thumbheight=None, thumbwidth=None):
     if not isinstance(filenames, list):
@@ -284,72 +264,10 @@ def image_detail(filenames, thumbheight=None, thumbwidth=None):
     images = {}
 
     for image in r.json()['query']['pages']:
-        filename = drop_start(image['title'], 'File:')
+        filename = utils.drop_start(image['title'], 'File:')
         images[filename] = image['imageinfo'][0]
 
     return images
-
-def image_detail_old(filenames, thumbwidth=None):
-    if not isinstance(filenames, list):
-        filenames = [filenames]
-    params = {'image': '|'.join(filenames)}
-    if thumbwidth is not None:
-        params['thumbwidth'] = thumbwidth
-    r = requests.get(commons_api_url, params=params)
-    xml = r.text
-    # workaround a bug in the commons API
-    # the API doesn't encode " in filenames
-    for f in filenames:
-        if '"' not in f:
-            continue
-        esc = f.replace('"', '&quot;')
-
-        xml = xml.replace(f'name="{f}"', f'name="{esc}"')
-
-    root = lxml.etree.fromstring(xml.encode('utf-8'))
-
-    images = []
-    for image in root:
-        if image.tag == 'image':
-            file_element = image.find('./file')
-        elif image.tag == 'file':
-            file_element = image
-        else:
-            continue
-        thumb_element = file_element.find('./urls/thumbnail')
-
-        image = {
-            'name': image.get('name'),
-            'image': file_element.find('./urls/file').text,
-            'height': int(file_element.find('./height').text),
-            'width': int(file_element.find('./width').text),
-        }
-
-        if thumb_element is not None:
-            image['thumbnail'] = thumb_element.text
-
-        images.append(image)
-
-    return images
-
-# def commons_filename(row):
-#     image = row['image']['value']
-#     assert image.startswith(commons_start)
-#     return urllib.parse.unquote(image[len(commons_start):])
-#
-# def commons_api(row):
-#     params = {
-#         'image': commons_filename(row),
-#         'thumbwidth': thumbwidth,
-#     }
-#     r = requests.get(commons_api_url, params=params)
-#     return r
-#
-# def get_commons(row):
-#     r = commons_api(row)
-#     root = lxml.etree.fromstring(r.content)
-#
-#     return root.find('./file/urls/thumbnail').text
 
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
@@ -424,6 +342,21 @@ def get_facets(sparql_params, params):
         if values
     }
 
+def format_time(row_time, row_timeprecision):
+    t = dateutil.parser.parse(row_time['value'])
+    precision = int(row_timeprecision['value'])
+
+    if precision == 9:
+        return t.year
+    if precision == 8:
+        return f'{t.year}s'
+    if precision == 7:
+        return f'{utils.ordinal((t.year // 100) + 1)} century'
+    if precision == 6:
+        return f'{utils.ordinal((t.year // 1000) + 1)} millennium'
+
+    return row_time['value']
+
 @app.route('/browse')
 def browse_page():
     params = [(pid, qid) for pid, qid in request.args.items()
@@ -467,31 +400,11 @@ def browse_page():
             continue
 
         if label == row_qid:
-            if 'title' in row:
-                label = row['title']['value']
-            else:
-                label = 'name missing'
-        if 'artistLabel' in row:
-            artist_name = row['artistLabel']['value']
-        else:
-            artist_name = '[artist unknown]'
+            label = get_row_value('title') or 'name missing'
 
-        if 'time' in row:
-            t = dateutil.parser.parse(row['time']['value'])
-            precision = int(row['timeprecision']['value'])
+        artist_name = get_row_value['artistLabel'] or '[artist unknown]'
 
-            if precision == 9:
-                d = t.year
-            elif precision == 8:
-                d = f'{t.year}s'
-            elif precision == 7:
-                d = f'{ordinal((t.year // 100) + 1)} century'
-            elif precision == 6:
-                d = f'{ordinal((t.year // 1000) + 1)} millennium'
-            else:
-                d = row['time']['value']
-        else:
-            d = None
+        d = format_time(row['time'], row['timeprecision']) if 'time' in row else None
 
         item = {
             'url': url_for('next_page', item_id=item_id),
@@ -530,10 +443,6 @@ def browse_page():
     title = ' / '.join(item_labels[qid] for pid, qid in params)
 
     return render_template('find_more.html',
-                           # qid=qid,
-                           # pid=pid,
-                           # item_entity=item_entity,
-                           # property_labels=property_labels,
                            facets=facets,
                            prop_labels=find_more_props,
                            label=title,
@@ -546,7 +455,3 @@ def browse_page():
 if __name__ == "__main__":
     app.debug = True
     app.run(host='0.0.0.0', debug=True)
-
-    # server = Server(app.wsgi_app)
-    # server.watch('template/*')
-    # server.serve()
