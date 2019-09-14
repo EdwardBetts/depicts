@@ -21,7 +21,7 @@
       <h3>{{ prop_label }} ({{ key }})</h3>
       {% for claim in claims %}
         {% set claim_qid = claim.mainsnak.datavalue.value.id %}
-        <a href="{{ url_for('find_more_page', property_id=key[1:], item_id=claim_qid[1:]) }}">{{ other[claim_qid] }}</a> ({{ claim_qid }})
+        <a href="{{ url_for('find_more_page', property_id=key[1:], item_id=claim_qid[1:]) }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
       {% endfor %}
     {% endif %}
   {% endfor %}

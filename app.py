@@ -9,6 +9,9 @@ import lxml.etree
 import requests
 import json
 import os
+import locale
+
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 url_start = 'http://www.wikidata.org/entity/Q'
 wikidata_url = 'https://www.wikidata.org/w/api.php'
@@ -158,50 +161,90 @@ def index():
 def run_query_with_cache(q, name):
     filename = f'cache/{name}.json'
     if os.path.exists(filename):
-        bindings = json.load(open(filename))
-    else:
-        r = run_wikidata_query(q)
-        bindings = r.json()['results']['bindings']
-        json.dump(bindings, open(filename, 'w'), indent=2)
+        from_cache = json.load(open(filename))
+        if isinstance(from_cache, dict) and from_cache.get('query') == q:
+            return from_cache['bindings']
+
+    r = run_wikidata_query(q)
+    bindings = r.json()['results']['bindings']
+    json.dump({'query': q, 'bindings': bindings},
+              open(filename, 'w'), indent=2)
 
     return bindings
 
+def get_row_value(row, field):
+    return row[field]['value'] if field in row else None
 
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
     pid = f'P{property_id}'
-    q = property_query.replace('PID', pid)
+    sort = request.args.get('sort')
+    sort_by_name = sort and sort.lower().strip() == 'name'
 
-    open(f'cache/{pid}_query.sparql', 'w').write(q)
+    q = property_query.replace('PID', pid)
     rows = run_query_with_cache(q, name=pid)
+
+    no_label_qid = [row['object']['value'].rpartition('/')[2]
+                    for row in rows
+                    if 'objectLabel' not in row and '/' in row['object']['value']]
+
+    if no_label_qid:
+        extra_label = get_labels(no_label_qid, name=f'{pid}_extra_labels')
+        if extra_label:
+            for row in rows:
+                item = row['object']['value']
+                if 'objectLabel' in row or '/' not in item:
+                    continue
+                qid = item.rpartition('/')[2]
+                if extra_label.get(qid):
+                    row['objectLabel'] = {'value': extra_label[qid]}
+
+    if sort_by_name:
+        # put rows with no English label at the end
+        no_label = [row for row in rows if 'objectLabel' not in row]
+        has_label = sorted((row for row in rows if 'objectLabel' in row),
+                            key=lambda row: locale.strxfrm(row['objectLabel']['value']))
+        rows = has_label + no_label
     label = find_more_props[pid]
 
-    return render_template('property.html', label=label, pid=pid, rows=rows)
+    return render_template('property.html',
+                           label=label,
+                           order=('name' if sort_by_name else 'count'),
+                           pid=pid,
+                           rows=rows)
 
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
     return render_template('item.html', qid=qid)
 
-def get_en_label(entity):
+def get_entity_label(entity):
     if 'en' in entity['labels']:
         return entity['labels']['en']['value']
+
+    label_values = {l['value'] for l in entity['labels'].values()}
+    if len(label_values) == 1:
+        return list(label_values)[0]
 
 def get_labels(keys, name=None):
     keys = sorted(keys, key=lambda i: int(i[1:]))
     if name is None:
         name = '_'.join(keys)
     filename = f'cache/{name}_labels.json'
+    labels = []
     if os.path.exists(filename):
-        labels = json.load(open(filename))
-    else:
-        labels = []
+        from_cache = json.load(open(filename))
+        if isinstance(from_cache, dict) and from_cache.get('keys') == keys:
+            labels = from_cache['labels']
+    if not labels:
         for cur in chunk(keys, 50):
             labels += get_entities(cur, props='labels')
-        json.dump(labels, open(filename, 'w'), indent=2)
+
+        json.dump({'keys': keys, 'labels': labels},
+                  open(filename, 'w'), indent=2)
 
     try:
-        return {prop['id']: get_en_label(prop) or '[ label missing ]' for prop in labels}
+        return {entity['id']: get_entity_label(entity) for entity in labels}
     except TypeError:
         pprint(labels)
         raise
@@ -362,7 +405,7 @@ def get_facets(sparql_params, params):
     q = (facet_query.replace('PARAMS', sparql_params)
                     .replace('PROPERTY_LIST', property_list))
 
-    open(f'cache/{flat}_facets_query.sparql', 'w').write(q)
+    # open(f'cache/{flat}_facets_query.sparql', 'w').write(q)
 
     bindings = run_query_with_cache(q, flat + '_facets')
 
