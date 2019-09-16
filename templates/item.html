@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ label }} ({{qid }}){% endblock %}
+
+{% block content %}
+<div class="m-3">
+  <h1>{{ self.title() }}</h1>
+  <div class="row">
+    <div class="col">
+      <img src="{{ image.thumburl }}">
+    </div>
+
+    <div class="col">
+      <p><a href="https://www.wikidata.org/wiki/{{ qid }}">view on Wikidata</a></p>
+      <p><a href="{{ url_for('random_painting') }}">random painting</a></p>
+      {% for hit in hits %}
+        <p>
+        url: {{ hit.url }}<br>
+        label: {{ hit.label }}<br>
+        qid: {{ hit.qid }}<br>
+        sources: {{ hit.sources() }}<br>
+        </p>
+      {% endfor %}
+
+    </div>
+  </div>
+
+  <pre>{{ item.query_variables() | pprint }}</pre>
+
+  <pre>{{ item.build_query() }}</pre>
+
+
+</div>
+{% endblock %}

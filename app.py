@@ -1,23 +1,15 @@
 #!/usr/bin/python3
 
-from flask import Flask, render_template, url_for, redirect, request
-from depicts import utils
-import dateutil.parser
-import urllib.parse
-import requests
+from flask import Flask, render_template, url_for, redirect, request, g
+from depicts import utils, wdqs, commons, mediawiki, painting
 import json
 import os
 import locale
+import random
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-url_start = 'http://www.wikidata.org/entity/Q'
-wikidata_url = 'https://www.wikidata.org/w/api.php'
-commons_url = 'https://www.wikidata.org/w/api.php'
-wikidata_query_api_url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
-commons_start = 'http://commons.wikimedia.org/wiki/Special:FilePath/'
 thumbwidth = 300
-thumbheight = 400
 
 app = Flask(__name__)
 
@@ -98,67 +90,29 @@ select ?object ?objectLabel ?objectDescription (count(*) as ?count) {
 order by desc(?count)
 '''
 
-def run_wikidata_query(query):
-    params = {'query': query, 'format': 'json'}
-    r = requests.post(wikidata_query_api_url, data=params, stream=True)
-    assert r.status_code == 200
-    return r
+painting_no_depicts_query = '''
+select distinct ?item where {
+  ?item wdt:P31 wd:Q3305213 .
+  ?item wdt:P18 ?image .
+  filter not exists { ?item wdt:P180 ?depicts }
+}
+'''
 
-def row_id(row):
-    return int(utils.drop_start(row['item']['value'], url_start))
+@app.template_global()
+def set_url_args(**new_args):
+    args = request.view_args.copy()
+    args.update(request.args)
+    args.update(new_args)
+    args = {k: v for k, v in args.items() if v is not None}
+    return url_for(request.endpoint, **args)
 
-def api_call(params, api_url=wikidata_url):
-    call_params = {
-        'format': 'json',
-        'formatversion': 2,
-        **params,
-    }
-
-    r = requests.get(wikidata_url, params=call_params)
-    return r
-
-def get_entity(qid):
-    json_data = api_call({'action': 'wbgetentities', 'ids': qid}).json()
-
-    try:
-        entity = list(json_data['entities'].values())[0]
-    except KeyError:
-        return
-    if 'missing' not in entity:
-        return entity
-
-def get_entities(ids, **params):
-    if not ids:
-        return []
-    params = {
-        'action': 'wbgetentities',
-        'ids': '|'.join(ids),
-        **params,
-    }
-    r = api_call(params)
-    json_data = r.json()
-    return list(json_data['entities'].values())
+@app.before_request
+def init_profile():
+    g.profiling = []
 
 @app.route("/")
 def index():
     return render_template('index.html', props=find_more_props)
-
-def run_query_with_cache(q, name):
-    filename = f'cache/{name}.json'
-    if os.path.exists(filename):
-        from_cache = json.load(open(filename))
-        if isinstance(from_cache, dict) and from_cache.get('query') == q:
-            return from_cache['bindings']
-
-    r = run_wikidata_query(q)
-    bindings = r.json()['results']['bindings']
-    json.dump({'query': q, 'bindings': bindings},
-              open(filename, 'w'), indent=2)
-
-    return bindings
-
-def get_row_value(row, field):
-    return row[field]['value'] if field in row else None
 
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
@@ -167,7 +121,7 @@ def property_query_page(property_id):
     sort_by_name = sort and sort.lower().strip() == 'name'
 
     q = property_query.replace('PID', pid)
-    rows = run_query_with_cache(q, name=pid)
+    rows = wdqs.run_query_with_cache(q, name=pid)
 
     no_label_qid = [row['object']['value'].rpartition('/')[2]
                     for row in rows
@@ -198,10 +152,35 @@ def property_query_page(property_id):
                            pid=pid,
                            rows=rows)
 
+@app.route('/random')
+def random_painting():
+    rows = wdqs.run_query_with_cache(painting_no_depicts_query)
+    row = random.choice(rows)
+    item_id = wdqs.row_id(row)
+    return redirect(url_for('item_page', item_id=item_id))
+
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
-    return render_template('item.html', qid=qid)
+    item = painting.Painting(qid)
+
+    width = 800
+    image_filename = item.image_filename
+    filename = f'cache/{qid}_{width}_image.json'
+    if os.path.exists(filename):
+        detail = json.load(open(filename))
+    else:
+        detail = commons.image_detail([image_filename], thumbwidth=width)
+        json.dump(detail, open(filename, 'w'), indent=2)
+
+    hits = item.run_query()
+
+    return render_template('item.html',
+                           qid=qid,
+                           item=item,
+                           image=detail[image_filename],
+                           hits=hits,
+                           title=item.display_title)
 
 def get_entity_label(entity):
     if 'en' in entity['labels']:
@@ -223,57 +202,18 @@ def get_labels(keys, name=None):
             labels = from_cache['labels']
     if not labels:
         for cur in utils.chunk(keys, 50):
-            labels += get_entities(cur, props='labels')
+            labels += mediawiki.get_entities(cur, props='labels')
 
         json.dump({'keys': keys, 'labels': labels},
                   open(filename, 'w'), indent=2)
 
     return {entity['id']: get_entity_label(entity) for entity in labels}
 
-def get_entity_with_cache(qid):
-    filename = f'cache/{qid}.json'
-    if os.path.exists(filename):
-        entity = json.load(open(filename))
-    else:
-        entity = get_entity(qid)
-        json.dump(entity, open(filename, 'w'), indent=2)
-
-    return entity
-
-def commons_uri_to_filename(uri):
-    return urllib.parse.unquote(utils.drop_start(uri, commons_start))
-
-def image_detail(filenames, thumbheight=None, thumbwidth=None):
-    if not isinstance(filenames, list):
-        filenames = [filenames]
-    if not filenames:
-        return {}
-
-    params = {
-        'action': 'query',
-        'titles': '|'.join(f'File:{f}' for f in filenames),
-        'prop': 'imageinfo',
-        'iiprop': 'url',
-    }
-    if thumbheight is not None:
-        params['iiurlheight'] = thumbheight
-    if thumbwidth is not None:
-        params['iiurlwidth'] = thumbwidth
-    r = api_call(params, api_url=commons_url)
-
-    images = {}
-
-    for image in r.json()['query']['pages']:
-        filename = utils.drop_start(image['title'], 'File:')
-        images[filename] = image['imageinfo'][0]
-
-    return images
-
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
     qid = f'Q{item_id}'
 
-    entity = get_entity_with_cache(qid)
+    entity = mediawiki.get_entity_with_cache(qid)
 
     width = 800
     image_filename = entity['claims']['P18'][0]['mainsnak']['datavalue']['value']
@@ -281,7 +221,7 @@ def next_page(item_id):
     if os.path.exists(filename):
         detail = json.load(open(filename))
     else:
-        detail = image_detail([image_filename], thumbwidth=width)
+        detail = commons.image_detail([image_filename], thumbwidth=width)
         json.dump(detail, open(filename, 'w'), indent=2)
 
     other_items = set()
@@ -311,8 +251,7 @@ def next_page(item_id):
 @app.route('/P<int:property_id>/Q<int:item_id>')
 def find_more_page(property_id, item_id):
     pid, qid = f'P{property_id}', f'Q{item_id}'
-
-    return redirect(url_for('browse_page') + f'?{pid}={qid}')
+    return redirect(url_for('browse_page', **{pid: qid}))
 
 def get_facets(sparql_params, params):
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
@@ -323,9 +262,7 @@ def get_facets(sparql_params, params):
     q = (facet_query.replace('PARAMS', sparql_params)
                     .replace('PROPERTY_LIST', property_list))
 
-    # open(f'cache/{flat}_facets_query.sparql', 'w').write(q)
-
-    bindings = run_query_with_cache(q, flat + '_facets')
+    bindings = wdqs.run_query_with_cache(q, flat + '_facets')
 
     facets = {key: [] for key in find_more_props.keys()}
     for row in bindings:
@@ -341,21 +278,6 @@ def get_facets(sparql_params, params):
         for key, values in facets.items()
         if values
     }
-
-def format_time(row_time, row_timeprecision):
-    t = dateutil.parser.parse(row_time['value'])
-    precision = int(row_timeprecision['value'])
-
-    if precision == 9:
-        return t.year
-    if precision == 8:
-        return f'{t.year}s'
-    if precision == 7:
-        return f'{utils.ordinal((t.year // 100) + 1)} century'
-    if precision == 6:
-        return f'{utils.ordinal((t.year // 1000) + 1)} millennium'
-
-    return row_time['value']
 
 @app.route('/browse')
 def browse_page():
@@ -374,49 +296,14 @@ def browse_page():
     sparql_params = ''.join(
         f'?item wdt:{pid} wd:{qid} .\n' for pid, qid in params)
 
-    query = find_more_query.replace('PARAMS', sparql_params)
+    q = find_more_query.replace('PARAMS', sparql_params)
 
-    filename = f'cache/{flat}.json'
-    if os.path.exists(filename):
-        bindings = json.load(open(filename))
-    else:
-        r = run_wikidata_query(query)
-        bindings = r.json()['results']['bindings']
-        json.dump(bindings, open(filename, 'w'), indent=2)
-
+    bindings = wdqs.run_query_with_cache(q, flat)
     facets = get_facets(sparql_params, params)
 
     page_size = 45
 
-    item_map = {}
-    for row in bindings:
-        item_id = row_id(row)
-        row_qid = f'Q{item_id}'
-        label = row['itemLabel']['value']
-        image_filename = commons_uri_to_filename(row['image']['value'])
-        if item_id in item_map:
-            item = item_map[item_id]
-            item['image_filename'].append(image_filename)
-            continue
-
-        if label == row_qid:
-            label = get_row_value('title') or 'name missing'
-
-        artist_name = get_row_value['artistLabel'] or '[artist unknown]'
-
-        d = format_time(row['time'], row['timeprecision']) if 'time' in row else None
-
-        item = {
-            'url': url_for('next_page', item_id=item_id),
-            'image_filename': [image_filename],
-            'item_id': item_id,
-            'qid': row_qid,
-            'label': label,
-            'date': d,
-            'artist_name': artist_name,
-        }
-        item_map[item_id] = item
-
+    item_map = wdqs.build_browse_item_map(bindings)
     items = []
     for item in item_map.values():
         if len(item['image_filename']) != 1:
@@ -432,13 +319,12 @@ def browse_page():
     if os.path.exists(filename):
         detail = json.load(open(filename))
     else:
-        detail = image_detail(filenames, thumbwidth=thumbwidth)
+        detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
         json.dump(detail, open(filename, 'w'), indent=2)
 
     for item in items:
+        item['url'] = url_for('item_page', item_id=item['item_id'])
         item['image'] = detail[item['image_filename']]
-
-    total = len(bindings)
 
     title = ' / '.join(item_labels[qid] for pid, qid in params)
 
@@ -448,8 +334,8 @@ def browse_page():
                            label=title,
                            labels=find_more_props,
                            bindings=bindings,
-                           items=items,
-                           total=total)
+                           total=len(bindings),
+                           items=items)
 
 
 if __name__ == "__main__":

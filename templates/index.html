@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="m-3">
+  <p><a href="{{ url_for('random_painting') }}">random painting</a></p>
   <ul>
   {% for pid, label in props.items() %}
     <li><a href="{{ url_for('property_query_page', property_id=pid[1:]) }}">{{ label }}</a>

@@ -10,9 +10,9 @@
 
   <p>Sort order:
   {% if order == 'name' %}
-    <b>name</b> or <a href="?sort=count">count</a>
+    <b>name</b> or <a href="{{ set_url_args(sort='count') }}">count</a>
   {% else %}
-    <a href="?sort=name">name</a> or <b>count</b>
+    <a href="{{ set_url_args(sort='name') }}">name</a> or <b>count</b>
   {% endif %}
   </p>
 
@@ -21,7 +21,7 @@
     {% set qid = row.object.value.rpartition('/')[2] %}
     {% set row_label = row.objectLabel.value if 'objectLabel' in row else '[ label missing ]' %}
     <li>
-    <a href="{{ url_for('browse_page') }}?{{ pid }}={{ qid }}">{{ row_label }}</a>
+      <a href="{{ url_for('browse_page', **{pid: qid}) }}">{{ row_label }}</a>
     {% if 'objectDescription' in row %}
     &mdash; {{ row.objectDescription.value }}
     {% endif %}

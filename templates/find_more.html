@@ -24,7 +24,7 @@
   {% for key, values in facets.items() %}
     <p>{{ prop_labels[key] }}:
       {% for v in values %}
-        <a href="?{{ request.query_string.decode('utf-8') }}&{{key}}={{v.qid}}">{{ v.label }}</a> ({{ v.count }})
+        <a href="{{ set_url_args(**{key: v.qid}) }}">{{ v.label }}</a> ({{ v.count }})
         {% if not loop.last %}|{% endif %}
       {% endfor %}
     </p>
