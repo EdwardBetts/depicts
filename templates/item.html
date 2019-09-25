@@ -47,11 +47,15 @@
           </div>
         {% endif %}
       {% endfor %}
-      </div>
 
       {% if saam_data %}
-      <pre>{{ saam_data | pprint }}</pre>
+        <div class="mt-2">
+        <h4>information from the Smithsonian American Art Museum</h4>
+        <div><strong>description</strong>: {{ saam_data.description }}</div>
+        <div><strong>keywords</strong>: {{ '; '.join(saam_data.keywords) }}</div>
+        </div>
       {% endif %}
+      </div>
       </div>
 
       {% raw %}
