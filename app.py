@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-from flask import Flask, render_template, url_for, redirect, request, g
-from depicts import utils, wdqs, commons, mediawiki, painting
+from flask import Flask, render_template, url_for, redirect, request, g, jsonify
+from depicts import utils, wdqs, commons, mediawiki, painting, saam, database
+from depicts.model import DepictsItem, DepictsItemAltLabel
 import json
 import os
 import locale
@@ -9,9 +10,9 @@ import random
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-thumbwidth = 300
-
 app = Flask(__name__)
+app.config.from_object('config.default')
+database.init_db(app.config['DB_URL'])
 
 find_more_props = {
     'P135': 'movement',
@@ -159,13 +160,7 @@ def random_painting():
     item_id = wdqs.row_id(row)
     return redirect(url_for('item_page', item_id=item_id))
 
-@app.route("/item/Q<int:item_id>")
-def item_page(item_id):
-    qid = f'Q{item_id}'
-    item = painting.Painting(qid)
-
-    width = 800
-    image_filename = item.image_filename
+def image_with_cache(qid, image_filename, width):
     filename = f'cache/{qid}_{width}_image.json'
     if os.path.exists(filename):
         detail = json.load(open(filename))
@@ -173,13 +168,46 @@ def item_page(item_id):
         detail = commons.image_detail([image_filename], thumbwidth=width)
         json.dump(detail, open(filename, 'w'), indent=2)
 
-    hits = item.run_query()
+    return detail[image_filename]
+
+def first_datavalue(entity, pid):
+    return entity['claims'][pid][0]['mainsnak']['datavalue']['value']
+
+
+@app.route("/item/Q<int:item_id>")
+def item_page(item_id):
+    qid = f'Q{item_id}'
+    item = painting.Painting(qid)
+    entity = mediawiki.get_entity_with_cache(qid)
+
+    width = 800
+    image_filename = item.image_filename
+    image = image_with_cache(qid, image_filename, width)
+
+    # hits = item.run_query()
+    label = get_entity_label(entity)
+    other = get_other(item.entity)
+
+    if 'P4704' in entity['claims']:
+        saam_id = first_datavalue(entity, 'P4704')
+        catalog = saam.get_catalog(saam_id)
+        saam_data = {
+            'keywords': catalog['keywords'],
+            'description': catalog['ld']['description']
+        }
+    else:
+        saam_data = None
 
     return render_template('item.html',
                            qid=qid,
                            item=item,
-                           image=detail[image_filename],
-                           hits=hits,
+                           saam_data=saam_data,
+                           labels=find_more_props,
+                           entity=item.entity,
+                           label=label,
+                           image=image,
+                           other=other,
+                           # hits=hits,
                            title=item.display_title)
 
 def get_entity_label(entity):
@@ -209,21 +237,7 @@ def get_labels(keys, name=None):
 
     return {entity['id']: get_entity_label(entity) for entity in labels}
 
-@app.route("/next/Q<int:item_id>")
-def next_page(item_id):
-    qid = f'Q{item_id}'
-
-    entity = mediawiki.get_entity_with_cache(qid)
-
-    width = 800
-    image_filename = entity['claims']['P18'][0]['mainsnak']['datavalue']['value']
-    filename = f'cache/{qid}_{width}_image.json'
-    if os.path.exists(filename):
-        detail = json.load(open(filename))
-    else:
-        detail = commons.image_detail([image_filename], thumbwidth=width)
-        json.dump(detail, open(filename, 'w'), indent=2)
-
+def get_other(entity):
     other_items = set()
     for key in find_more_props.keys():
         if key not in entity['claims']:
@@ -231,21 +245,27 @@ def next_page(item_id):
         for claim in entity['claims'][key]:
             other_items.add(claim['mainsnak']['datavalue']['value']['id'])
 
-    item_labels = get_labels(other_items)
+    return get_labels(other_items)
 
-    if 'en' in entity['labels']:
-        label = entity['labels']['en']['value']
-    elif len(entity['labels']) == 1:
-        label = list(entity['labels'].values())[0]['value']
-    else:
-        label = 'title missing'
+@app.route("/next/Q<int:item_id>")
+def next_page(item_id):
+    qid = f'Q{item_id}'
+
+    entity = mediawiki.get_entity_with_cache(qid)
+
+    width = 800
+    image_filename = first_datavalue(entity, 'P18')
+    image = image_with_cache(qid, image_filename, width)
+
+    label = get_entity_label(entity)
+    other = get_other(entity)
 
     return render_template('next.html',
                            qid=qid,
                            label=label,
-                           image=detail[image_filename],
+                           image=image,
                            labels=find_more_props,
-                           other=item_labels,
+                           other=other,
                            entity=entity)
 
 @app.route('/P<int:property_id>/Q<int:item_id>')
@@ -315,6 +335,8 @@ def browse_page():
 
     filenames = [cur['image_filename'] for cur in items]
 
+    thumbwidth = app.config['THUMBWIDTH']
+
     filename = f'cache/{flat}_{page_size}_images.json'
     if os.path.exists(filename):
         detail = json.load(open(filename))
@@ -336,6 +358,58 @@ def browse_page():
                            bindings=bindings,
                            total=len(bindings),
                            items=items)
+
+@app.route('/lookup')
+def depicts_lookup():
+    terms = request.args.get('terms')
+    if not terms:
+        return jsonify(error='terms parameter is required')
+
+    terms = terms.strip()
+    if len(terms) < 3:
+        return jsonify(
+            count=0,
+            hits=[],
+            notice='terms too short for lookup',
+        )
+
+    item_ids = []
+    hits = []
+    q1 = DepictsItem.query.filter(DepictsItem.label.ilike(terms + '%'))
+    for item in q1:
+        hit = {
+            'label': item.label,
+            'description': item.description,
+            'qid': item.qid,
+            'count': item.count,
+        }
+        item_ids.append(item.item_id)
+        hits.append(hit)
+
+    cls = DepictsItemAltLabel
+    q2 = cls.query.filter(cls.alt_label.ilike(terms + '%'),
+                          ~cls.item_id.in_(item_ids))
+
+    for alt in q2:
+        item = alt.item
+        hit = {
+            'label': item.label,
+            'description': item.description,
+            'qid': item.qid,
+            'count': item.count,
+            'alt_label': alt.alt_label,
+        }
+        hits.append(hit)
+
+    hits.sort(key=lambda hit: hit['count'], reverse=True)
+
+    ret = {
+        'count': q1.count() + q2.count(),
+        'hits': hits,
+        'terms': terms,
+    }
+
+    return jsonify(ret)
 
 
 if __name__ == "__main__":

@@ -2,17 +2,32 @@
 
 {% block title %}{{ label }} ({{qid }}){% endblock %}
 
-{% block content %}
-<div class="m-3">
-  <h1>{{ self.title() }}</h1>
-  <div class="row">
-    <div class="col">
-      <img src="{{ image.thumburl }}">
-    </div>
+{% block style %}
+<style>
+.description { margin-left: 2em; color: rgb(96, 96, 96); }
+</style>
+{% endblock %}
 
-    <div class="col">
-      <p><a href="https://www.wikidata.org/wiki/{{ qid }}">view on Wikidata</a></p>
-      <p><a href="{{ url_for('random_painting') }}">random painting</a></p>
+{% block content %}
+<div>
+  <div class="d-flex">
+    <div class="flex-shrink-1 vh-100">
+        <img src="{{ image.thumburl }}" class="h-100" />
+      </div>
+      <div class="p-2 flex-fill">
+        <h1>{{ self.title() }}</h1>
+
+  <p>
+  <a href="https://www.wikidata.org/wiki/{{ qid }}">view this painting on Wikidata</a>
+  |
+  <a href="{{ url_for('random_painting') }}">open a random painting</a>
+  </p>
+
+
+
+
+
+      <div>
       {% for hit in hits %}
         <p>
         url: {{ hit.url }}<br>
@@ -22,13 +37,70 @@
         </p>
       {% endfor %}
 
+      <div>
+      {% for key, prop_label in labels.items() %}
+        {% set claims = entity['claims'][key] %}
+        {% if claims %}
+          <div>
+          <strong>{{ prop_label }}</strong>:
+          {% for claim in claims %}
+            {% set claim_qid = claim.mainsnak.datavalue.value.id %}
+            <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      </div>
+
+      {% if saam_data %}
+      <pre>{{ saam_data | pprint }}</pre>
+      {% endif %}
+      </div>
+
+      {% raw %}
+      <div id="app" class="mt-2">
+        <h3>what can you see in this painting?</h3>
+
+        <div v-for="hit in new_depicts">
+          <div>
+            {{ hit.label }}
+            <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
+            &mdash; {{ hit.count }} existing paintings
+            ({{ hit.qid }})
+            <a :href="'https://www.wikidata.org/wiki/' + hit.qid">view on Wikidata</a>
+          </div>
+          <div v-if="hit.description">
+            <div class="description">{{ hit.description }}</div>
+          </div>
+        </div>
+
+        <input class="form-control-lg mt-2 w-100" autofocus autocomplete="off" v-model.trim="searchTerms" @input="search" />
+        <div id="item-list">
+          <div v-for="hit in hits">
+            <div>
+              <a href="#" @click="add_depicts(hit)">{{ hit.label }}</a>
+              <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
+              &mdash; {{ hit.count }} existing paintings
+              ({{ hit.qid }})
+              <a :href="'https://www.wikidata.org/wiki/' + hit.qid">view on Wikidata</a>
+            </div>
+            <div v-if="hit.description">
+              <div class="description">{{ hit.description }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
     </div>
   </div>
 
-  <pre>{{ item.query_variables() | pprint }}</pre>
-
-  <pre>{{ item.build_query() }}</pre>
-
-
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+  var lookup_url = {{ url_for('depicts_lookup') | tojson }};
+</script>
+<script src="{{ url_for('static', filename='vue/vue.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% endblock %}
