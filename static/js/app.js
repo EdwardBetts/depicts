@@ -6,6 +6,9 @@ var app = new Vue({
     new_depicts: [],
   },
   methods: {
+    remove(index) {
+        this.$delete(this.new_depicts, index);
+    },
     add_depicts(hit) {
       this.new_depicts.push(hit);
       this.hits = [];

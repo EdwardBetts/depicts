@@ -62,10 +62,11 @@
       <div id="app" class="mt-2">
         <h3>what can you see in this painting?</h3>
 
-        <div v-for="hit in new_depicts">
+        <div v-for="(hit, index) in new_depicts">
           <div>
             {{ hit.label }}
             <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
+            <a href="#" @click.prevent="remove(index)" >remove</a>
             &mdash; {{ hit.count }} existing paintings
             ({{ hit.qid }})
             <a :href="'https://www.wikidata.org/wiki/' + hit.qid">view on Wikidata</a>
@@ -79,7 +80,7 @@
         <div id="item-list">
           <div v-for="hit in hits">
             <div>
-              <a href="#" @click="add_depicts(hit)">{{ hit.label }}</a>
+              <a href="#" @click.prevent="add_depicts(hit)">{{ hit.label }}</a>
               <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
               &mdash; {{ hit.count }} existing paintings
               ({{ hit.qid }})
