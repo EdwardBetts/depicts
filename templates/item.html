@@ -11,9 +11,6 @@
 {% block content %}
 <div>
   <div class="d-flex">
-    <div class="flex-shrink-1 vh-100">
-        <img src="{{ image.thumburl }}" class="h-100" />
-      </div>
       <div class="p-2 flex-fill">
         <h1>{{ self.title() }}</h1>
 
@@ -91,6 +88,9 @@
         </div>
       </div>
       {% endraw %}
+    </div>
+    <div class="flex-shrink-1 vh-100">
+      <img src="{{ image.thumburl }}" class="h-100" />
     </div>
   </div>
 
