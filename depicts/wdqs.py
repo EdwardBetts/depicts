@@ -16,6 +16,10 @@ def row_id(row):
 def get_row_value(row, field):
     return row[field]['value'] if field in row else None
 
+def get_row_text(row, field):
+    if field in row and 'xml:lang' in row[field]:
+        return row[field]['value']
+
 def commons_uri_to_filename(uri):
     return urllib.parse.unquote(utils.drop_start(uri, commons_start))
 
