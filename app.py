@@ -410,6 +410,7 @@ def item_page(item_id):
                            catalog_detail=catalog_detail,
                            labels=find_more_props,
                            entity=item.entity,
+                           username=get_username(),
                            label=label,
                            image=image,
                            other=other,
