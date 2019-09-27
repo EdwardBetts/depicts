@@ -3,7 +3,7 @@ import lxml.html
 import os
 import re
 
-re_url = re.compile(r'www.museodelprado.es/en/.*/([^/]+)$')
+re_url = re.compile(r'www.museodelprado.es/(.+)$')
 
 def get_html(url):
     catalog_id = re_url.search(url).group(1).replace('/', '_')
