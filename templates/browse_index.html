@@ -11,7 +11,9 @@
   {% endif %}
   </p>
 
+  {% if username %}
   <p>username: {{ username }}</p>
+  {% endif %}
 
   {% if not username %}
     <p>This tool must be connected with Wikidata to work.</p>

@@ -119,9 +119,9 @@ def set_url_args(**new_args):
 def init_profile():
     g.profiling = []
 
-@app.route("/")
-def index():
-    return render_template('index.html',
+@app.route("/browse")
+def browse_index():
+    return render_template('browse_index.html',
                            props=find_more_props,
                            username=get_username())
 
@@ -163,7 +163,11 @@ def property_query_page(property_id):
                            pid=pid,
                            rows=rows)
 
-@app.route('/random')
+@app.route('/')
+def start():
+    return random_painting()
+
+@app.route('/next')
 def random_painting():
     rows = wdqs.run_query_with_cache(painting_no_depicts_query)
     row = random.choice(rows)
