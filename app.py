@@ -115,6 +115,12 @@ def set_url_args(**new_args):
     args = {k: v for k, v in args.items() if v is not None}
     return url_for(request.endpoint, **args)
 
+@app.template_global()
+def current_url():
+    args = request.view_args.copy()
+    args.update(request.args)
+    return url_for(request.endpoint, **args)
+
 @app.before_request
 def init_profile():
     g.profiling = []
