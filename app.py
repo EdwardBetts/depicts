@@ -240,8 +240,15 @@ def oauth_callback():
     session['owner_key'] = oauth_tokens.get('oauth_token')
     session['owner_secret'] = oauth_tokens.get('oauth_token_secret')
 
-    next_page = session.get('next_page')
+    next_page = session.get('after_login')
     return redirect(next_page) if next_page else random_painting()
+
+@app.route('/oauth/disconnect')
+def oauth_disconnect():
+    for key in 'owner_key', 'owner_secret', 'username', 'after_login':
+        if key in session:
+            del session[key]
+    return random_painting()
 
 def get_username():
     if 'owner_key' not in session:
