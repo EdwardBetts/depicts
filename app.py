@@ -119,12 +119,6 @@ def set_url_args(**new_args):
 def init_profile():
     g.profiling = []
 
-@app.route("/browse")
-def browse_index():
-    return render_template('browse_index.html',
-                           props=find_more_props,
-                           username=get_username())
-
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
     pid = f'P{property_id}'
@@ -454,6 +448,11 @@ def get_facets(sparql_params, params):
 def browse_page():
     params = [(pid, qid) for pid, qid in request.args.items()
               if pid.startswith('P') and qid.startswith('Q')]
+
+    if not params:
+        return render_template('browse_index.html',
+                               props=find_more_props,
+                               username=get_username())
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
 
