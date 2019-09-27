@@ -1,17 +1,26 @@
 #!/usr/bin/python3
 
-from flask import Flask, render_template, url_for, redirect, request, g, jsonify
-from depicts import utils, wdqs, commons, mediawiki, painting, saam, database
+from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
+from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
+                     dia, rijksmuseum, npg, museodelprado, barnesfoundation,
+                     wd_catalog)
 from depicts.model import DepictsItem, DepictsItemAltLabel
+from requests_oauthlib import OAuth1Session
+from urllib.parse import urlencode
+import requests.exceptions
+import requests
+import lxml.html
 import json
 import os
 import locale
 import random
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0'
 
 app = Flask(__name__)
 app.config.from_object('config.default')
+app.config['SECRET_KEY'] = '4e65d7cf665eb275b91b7b9a5d5dd3a9894a33dbd2ff4472'
 database.init_db(app.config['DB_URL'])
 
 find_more_props = {
@@ -113,7 +122,9 @@ def init_profile():
 
 @app.route("/")
 def index():
-    return render_template('index.html', props=find_more_props)
+    return render_template('index.html',
+                           props=find_more_props,
+                           username=get_username())
 
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
@@ -160,6 +171,86 @@ def random_painting():
     item_id = wdqs.row_id(row)
     return redirect(url_for('item_page', item_id=item_id))
 
+@app.route('/oauth/start')
+def start_oauth():
+    client_key = app.config['CLIENT_KEY']
+    client_secret = app.config['CLIENT_SECRET']
+    base_url = 'https://www.wikidata.org/w/index.php'
+    request_token_url = base_url + '?title=Special%3aOAuth%2finitiate'
+
+    oauth = OAuth1Session(client_key,
+                          client_secret=client_secret,
+                          callback_uri='oob')
+    fetch_response = oauth.fetch_request_token(request_token_url)
+
+    session['owner_key'] = fetch_response.get('oauth_token')
+    session['owner_secret'] = fetch_response.get('oauth_token_secret')
+
+    base_authorization_url = 'https://www.wikidata.org/wiki/Special:OAuth/authorize'
+    authorization_url = oauth.authorization_url(base_authorization_url,
+                                                oauth_consumer_key=client_key)
+    return redirect(authorization_url)
+
+@app.route("/oauth/callback", methods=["GET"])
+def oauth_callback():
+    base_url = 'https://www.wikidata.org/w/index.php'
+    client_key = app.config['CLIENT_KEY']
+    client_secret = app.config['CLIENT_SECRET']
+
+    oauth = OAuth1Session(client_key,
+                          client_secret=client_secret,
+                          resource_owner_key=session['owner_key'],
+                          resource_owner_secret=session['owner_secret'])
+
+    oauth_response = oauth.parse_authorization_response(request.url)
+    verifier = oauth_response.get('oauth_verifier')
+    access_token_url = base_url + '?title=Special%3aOAuth%2ftoken'
+    oauth = OAuth1Session(client_key,
+                          client_secret=client_secret,
+                          resource_owner_key=session['owner_key'],
+                          resource_owner_secret=session['owner_secret'],
+                          verifier=verifier)
+
+    oauth_tokens = oauth.fetch_access_token(access_token_url)
+    session['owner_key'] = oauth_tokens.get('oauth_token')
+    session['owner_secret'] = oauth_tokens.get('oauth_token_secret')
+
+    return redirect(url_for('show_user'))
+
+def get_username():
+    if 'owner_key' not in session:
+        return  # not authorized
+
+    if 'username' in session:
+        return session['username']
+
+    params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
+    session['username'] = oauth_api_request(params)['query']['userinfo']['name']
+
+    return session['username']
+
+@app.route("/show_user")
+def show_user():
+    # Make authenticated calls to the API
+    params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
+    reply = oauth_api_request(params)['query']
+
+    return repr(reply)
+
+def oauth_api_request(params):
+    url = 'https://www.wikidata.org/w/api.php?' + urlencode(params)
+    client_key = app.config['CLIENT_KEY']
+    client_secret = app.config['CLIENT_SECRET']
+    oauth = OAuth1Session(client_key,
+                          client_secret=client_secret,
+                          resource_owner_key=session['owner_key'],
+                          resource_owner_secret=session['owner_secret'])
+    r = oauth.get(url)
+    reply = r.json()
+
+    return reply
+
+
 def image_with_cache(qid, image_filename, width):
     filename = f'cache/{qid}_{width}_image.json'
     if os.path.exists(filename):
@@ -171,8 +262,30 @@ def image_with_cache(qid, image_filename, width):
     return detail[image_filename]
 
 def first_datavalue(entity, pid):
-    return entity['claims'][pid][0]['mainsnak']['datavalue']['value']
+    if pid in entity['claims']:
+        return entity['claims'][pid][0]['mainsnak']['datavalue']['value']
 
+def get_catalog_page(property_id, value):
+    detail = wd_catalog.lookup(property_id, value)
+    url = detail['url']
+    catalog_id = value.replace('/', '_')
+
+    filename = f'cache/{property_id}_{catalog_id}.html'
+
+    if os.path.exists(filename):
+        html = open(filename).read()
+    else:
+        r = requests.get(url, headers={'User-Agent': user_agent})
+        html = r.text
+        open(filename, 'w').write(html)
+
+    return html
+
+def get_description_from_page(html):
+    root = lxml.html.fromstring(html)
+    div = root.find('.//div[@itemprop="description"]')
+    if div is not None:
+        return div.text
 
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
@@ -188,20 +301,55 @@ def item_page(item_id):
     label = get_entity_label(entity)
     other = get_other(item.entity)
 
+    catalog_ids = wd_catalog.find_catalog_id(entity)
+    catalog_detail = []
+    for property_id in sorted(catalog_ids):
+        value = first_datavalue(entity, property_id)
+        detail = wd_catalog.lookup(property_id, value)
+        catalog_detail.append(detail)
+
+    catalog_url = first_datavalue(entity, 'P973')
+
+    catalog = None
     if 'P4704' in entity['claims']:
         saam_id = first_datavalue(entity, 'P4704')
         catalog = saam.get_catalog(saam_id)
-        saam_data = {
-            'keywords': catalog['keywords'],
-            'description': catalog['ld']['description']
-        }
-    else:
-        saam_data = None
+    elif 'P4709' in entity['claims']:
+        catalog_id = first_datavalue(entity, 'P4709')
+        catalog = barnesfoundation.get_catalog(catalog_id)
+    elif catalog_url and 'www.dia.org' in catalog_url:
+        catalog = dia.get_catalog(catalog_url)
+    elif catalog_url and 'www.rijksmuseum.nl' in catalog_url:
+        catalog = rijksmuseum.get_catalog(catalog_url)
+    elif catalog_url and 'www.npg.org.uk' in catalog_url:
+        catalog = npg.get_catalog(catalog_url)
+    elif catalog_url and 'www.museodelprado.es' in catalog_url:
+        catalog = museodelprado.get_catalog(catalog_url)
+
+    if not catalog and catalog_ids:
+        for property_id in sorted(catalog_ids):
+            if property_id == 'P350':
+                continue  # RKDimages ID
+            value = first_datavalue(entity, property_id)
+            detail = wd_catalog.lookup(property_id, value)
+            try:
+                html = get_catalog_page(property_id, value)
+            except requests.exceptions.SSLError:
+                continue  # ignore this error
+            description = get_description_from_page(html)
+            if not description:
+                continue
+            catalog = {
+                'institution': detail['label'],
+                'description': description,
+            }
 
     return render_template('item.html',
                            qid=qid,
                            item=item,
-                           saam_data=saam_data,
+                           catalog=catalog,
+                           catalog_url=catalog_url,
+                           catalog_detail=catalog_detail,
                            labels=find_more_props,
                            entity=item.entity,
                            label=label,

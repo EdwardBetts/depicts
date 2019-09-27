@@ -47,12 +47,38 @@
           </div>
         {% endif %}
       {% endfor %}
+      {% if catalog_detail %}
+        {% for detail in catalog_detail %}
+          <div>
+          <strong>{{ detail.label }}</strong>:
+          <a href="{{ detail.url }}">{{ detail.value }}</a>
+          </div>
+        {% endfor %}
+      {% endif %}
 
-      {% if saam_data %}
+
+      {% if catalog_url %}
+        <p>
+          <strong>catalog URL</strong>:
+          <a href="{{ catalog_url }}">{{ catalog_url }}</a>
+        </p>
+      {% endif %}
+
+      {% if catalog %}
         <div class="mt-2">
-        <h4>information from the Smithsonian American Art Museum</h4>
-        <div><strong>description</strong>: {{ saam_data.description }}</div>
-        <div><strong>keywords</strong>: {{ '; '.join(saam_data.keywords) }}</div>
+          <h4>information from the {{ catalog.institution }} catalog</h4>
+          {% if catalog.description %}
+            <div><strong>description</strong>: {{ catalog.description }}</div>
+          {% endif %}
+          {% if catalog.keywords %}
+            <div><strong>keywords</strong>
+              <ul>
+                {% for keyword in catalog.keywords %}
+                  <li>{{ keyword }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
         </div>
       {% endif %}
       </div>
@@ -95,7 +121,7 @@
       {% endraw %}
     </div>
     <div class="flex-shrink-1 vh-100">
-      <img src="{{ image.thumburl }}" class="h-100" />
+      <img src="{{ image.thumburl }}" />
     </div>
   </div>
 
