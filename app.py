@@ -4,7 +4,7 @@ from flask import Flask, render_template, url_for, redirect, request, g, jsonify
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
                      wd_catalog)
-from depicts.model import DepictsItem, DepictsItemAltLabel
+from depicts.model import DepictsItem, DepictsItemAltLabel, Edit
 from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
 import requests.exceptions
@@ -122,7 +122,25 @@ def init_profile():
 @app.route('/save/Q<int:item_id>', methods=['POST'])
 def save(item_id):
     depicts = request.form.getlist('depicts')
-    return repr(depicts)
+    username = get_username()
+    assert username
+
+    token = get_token()
+
+    for depicts_qid in depicts:
+        depicts_id = int(depicts_qid[1:])
+        r = create_claim(item_id, depicts_id, token)
+        reply = r.json()
+        if 'error' in reply:
+            return 'error:' + r.text
+        print(r.text)
+        edit = Edit(username=username,
+                    painting_id=item_id,
+                    depicts_id=depicts_id)
+        database.session.add(edit)
+        database.session.commit()
+
+    return redirect(url_for('next_page', item_id=item_id))
 
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
@@ -252,6 +270,43 @@ def oauth_api_request(params):
 
     return reply
 
+def create_claim(painting_id, depicts_id, token):
+    painting_qid = f'Q{painting_id}'
+    value = json.dumps({'entity-type': 'item',
+                        'numeric-id': depicts_id})
+    params = {
+        'action': 'wbcreateclaim',
+        'entity': painting_qid,
+        'property': 'P180',
+        'snaktype': 'value',
+        'value': value,
+        'token': token,
+        'format': 'json',
+        'formatversion': 2,
+    }
+    return oauth_api_post_request(params)
+
+def get_token():
+    params = {
+        'action': 'query',
+        'meta': 'tokens',
+        'format': 'json',
+        'formatversion': 2,
+    }
+    reply = oauth_api_request(params)
+    token = reply['query']['tokens']['csrftoken']
+
+    return token
+
+def oauth_api_post_request(params):
+    url = 'https://www.wikidata.org/w/api.php'
+    client_key = app.config['CLIENT_KEY']
+    client_secret = app.config['CLIENT_SECRET']
+    oauth = OAuth1Session(client_key,
+                          client_secret=client_secret,
+                          resource_owner_key=session['owner_key'],
+                          resource_owner_secret=session['owner_secret'])
+    return oauth.post(url, data=params)
 
 def image_with_cache(qid, image_filename, width):
     filename = f'cache/{qid}_{width}_image.json'

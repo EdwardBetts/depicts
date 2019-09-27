@@ -1,7 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
-from .database import session
+from .database import session, now_utc
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.types import Integer, String
+from sqlalchemy.types import Integer, String, DateTime
 from sqlalchemy.orm import column_property, relationship
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import cast
@@ -33,3 +33,10 @@ class DepictsItemAltLabel(Base):
 
     def __init__(self, alt_label):
         self.alt_label = alt_label
+
+class Edit(Base):
+    __tablename__ = 'edit'
+    username = Column(String, primary_key=True)
+    painting_id = Column(Integer, primary_key=True)
+    depicts_id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, default=now_utc())

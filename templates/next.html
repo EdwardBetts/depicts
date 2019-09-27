@@ -3,30 +3,39 @@
 {% block title %}{{ label }} ({{qid }}){% endblock %}
 
 {% block content %}
-<div class="m-3">
-  <h1>{{ self.title() }}</h1>
-  {# <pre>{{ other | pprint }}</pre> #}
+<div class="d-flex">
+  <div class="p-2 flex-fill">
+    <h1>{{ self.title() }}</h1>
 
-  {# <img src="{{ image.thumburl }}" height="{{ image.thumbheight }}" width="{{ image.thumbwidth }}"> #}
-  <div class="row">
-    <div class="col">
-  <img src="{{ image.thumburl }}">
-    </div>
+    <div class="alert alert-primary" role="alert">
+  Thanks for contributing. Your edits have been saved to the painting on Wikidata. Use the links below to find other similar paintings to catalog.
+</div>
 
-    <div class="col">
-  <p><a href="https://www.wikidata.org/wiki/{{ qid }}">view on Wikidata</a></p>
-  {% for key, prop_label in labels.items() %}
-    {% set claims = entity['claims'][key] %}
-    {% if claims %}
-      <h3>{{ prop_label }} ({{ key }})</h3>
-      {% for claim in claims %}
-        {% set claim_qid = claim.mainsnak.datavalue.value.id %}
-        <a href="{{ url_for('find_more_page', property_id=key[1:], item_id=claim_qid[1:]) }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
-      {% endfor %}
-    {% endif %}
-  {% endfor %}
-    </div>
+  <p>
+  <a href="https://www.wikidata.org/wiki/{{ qid }}">view this painting on Wikidata</a>
+  |
+  <a href="{{ url_for('random_painting') }}">switch to another painting</a>
+  |
+  <a href="{{ url_for('browse_page') }}">browse paintings</a>
+  </p>
+
+
+
+    {% for key, prop_label in labels.items() %}
+      {% set claims = entity['claims'][key] %}
+      {% if claims %}
+        <h3>{{ prop_label }} ({{ key }})</h3>
+        {% for claim in claims %}
+          {% set claim_qid = claim.mainsnak.datavalue.value.id %}
+          <a href="{{ url_for('find_more_page', property_id=key[1:], item_id=claim_qid[1:]) }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+
   </div>
 
+  <div class="flex-shrink-1 vh-100">
+    <img src="{{ image.thumburl }}">
+  </div>
 </div>
 {% endblock %}
