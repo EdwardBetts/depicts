@@ -20,7 +20,6 @@ user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0
 
 app = Flask(__name__)
 app.config.from_object('config.default')
-app.config['SECRET_KEY'] = '4e65d7cf665eb275b91b7b9a5d5dd3a9894a33dbd2ff4472'
 database.init_db(app.config['DB_URL'])
 
 find_more_props = {
