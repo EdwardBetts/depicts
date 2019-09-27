@@ -74,11 +74,9 @@
           {% endif %}
           {% if catalog.keywords %}
             <div><strong>keywords</strong>
-              <ul>
-                {% for keyword in catalog.keywords %}
-                  <li>{{ keyword }}</li>
-                {% endfor %}
-              </ul>
+              {% for keyword in catalog.keywords %}
+                <span class="badge badge-primary">{{ keyword }}</span>
+              {% endfor %}
             </div>
           {% endif %}
         </div>
