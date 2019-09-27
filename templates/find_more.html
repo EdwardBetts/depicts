@@ -21,6 +21,9 @@
 
   <p>{{ '{:,d}'.format(total) }} paintings found</p>
 
+  <a href="#" id="toggle-filters">toggle filters</a>
+
+  <div id="filters">
   {% for key, values in facets.items() %}
     <p>{{ prop_labels[key] }}:
       {% for v in values %}
@@ -28,8 +31,8 @@
         {% if not loop.last %}|{% endif %}
       {% endfor %}
     </p>
-
   {% endfor %}
+  </div>
 
 <div class="card-columns">
   {% for item in items %}
@@ -55,4 +58,16 @@
 #}
 
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+  $('#filters').hide();
+
+  $('#toggle-filters').click((event) => {
+    event.preventDefault();
+    $('#filters').toggle()
+  });
+
+</script>
 {% endblock %}
