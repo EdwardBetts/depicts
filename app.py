@@ -193,6 +193,11 @@ def random_painting():
 
 @app.route('/oauth/start')
 def start_oauth():
+
+    next_page = request.args.get('next')
+    if next_page:
+        session['after_login'] = next_page
+
     client_key = app.config['CLIENT_KEY']
     client_secret = app.config['CLIENT_SECRET']
     base_url = 'https://www.wikidata.org/w/index.php'
@@ -235,7 +240,8 @@ def oauth_callback():
     session['owner_key'] = oauth_tokens.get('oauth_token')
     session['owner_secret'] = oauth_tokens.get('oauth_token_secret')
 
-    return redirect(url_for('browse_page'))
+    next_page = session.get('next_page')
+    return redirect(next_page) if next_page else random_painting()
 
 def get_username():
     if 'owner_key' not in session:
