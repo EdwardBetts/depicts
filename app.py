@@ -245,7 +245,8 @@ def get_username():
         return session['username']
 
     params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
-    session['username'] = oauth_api_request(params)['query']['userinfo']['name']
+    r = oauth_api_request(params)
+    session['username'] = r.json()['query']['userinfo']['name']
 
     return session['username']
 
