@@ -218,7 +218,7 @@ def oauth_callback():
     session['owner_key'] = oauth_tokens.get('oauth_token')
     session['owner_secret'] = oauth_tokens.get('oauth_token_secret')
 
-    return redirect(url_for('show_user'))
+    return redirect(url_for('browse_index'))
 
 def get_username():
     if 'owner_key' not in session:
