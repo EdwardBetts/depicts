@@ -1,10 +1,7 @@
-#!/usr/bin/python3
-
 import requests
 import lxml.html
 import json
 import os
-from pprint import pprint
 
 def get_html(saam_id):
     filename = f'cache/saam_{saam_id}.html'
@@ -29,4 +26,11 @@ def parse_html(html):
     return {'ld': ld, 'keywords': keywords}
 
 def get_catalog(saam_id):
-    return parse_html(get_html(saam_id))
+    data = parse_html(get_html(saam_id))
+    return {
+        'institution': 'Smithsonian American Art Museum',
+        'keywords': data['keywords'],
+        'description': data['ld']['description']
+    }
+
+
