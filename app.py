@@ -119,6 +119,11 @@ def set_url_args(**new_args):
 def init_profile():
     g.profiling = []
 
+@app.route('/save/Q<int:item_id>', methods=['POST'])
+def save(item_id):
+    depicts = request.form.getlist('depicts')
+    return repr(depicts)
+
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
     pid = f'P{property_id}'
@@ -343,6 +348,7 @@ def item_page(item_id):
 
     return render_template('item.html',
                            qid=qid,
+                           item_id=item_id,
                            item=item,
                            catalog=catalog,
                            catalog_url=catalog_url,

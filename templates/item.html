@@ -84,11 +84,17 @@
       </div>
       </div>
 
+      <form method="POST" action="{{ url_for('save', item_id=item_id) }}">
       {% raw %}
       <div id="app" class="mt-2">
         <h3>what can you see in this painting?</h3>
 
+        <div v-if="new_depicts.length">
+          <div>{{ new_depicts.length }} new items to add to painting depicts statement</div>
+        </div>
+
         <div v-for="(hit, index) in new_depicts">
+          <input type="hidden" name="depicts" :value="hit.qid">
           <div>
             {{ hit.label }}
             <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
@@ -102,7 +108,10 @@
           </div>
         </div>
 
+        <button type="submit" v-if="new_depicts.length" class="btn btn-primary">add these to painting on Wikidata</button>
+
         <input class="form-control-lg mt-2 w-100" autofocus autocomplete="off" v-model.trim="searchTerms" @input="search" />
+
         <div id="item-list">
           <div v-for="hit in hits">
             <div>
@@ -119,6 +128,7 @@
         </div>
       </div>
       {% endraw %}
+      </form>
     </div>
     <div class="flex-shrink-1 vh-100">
       <img src="{{ image.thumburl }}" />
