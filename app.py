@@ -349,7 +349,7 @@ def get_token():
         'format': 'json',
         'formatversion': 2,
     }
-    reply = oauth_api_request(params)
+    reply = oauth_api_request(params, timeout=2)
     token = reply['query']['tokens']['csrftoken']
 
     return token
@@ -362,7 +362,7 @@ def oauth_api_post_request(params):
                           client_secret=client_secret,
                           resource_owner_key=session['owner_key'],
                           resource_owner_secret=session['owner_secret'])
-    return oauth.post(url, data=params)
+    return oauth.post(url, data=params, timeout=2)
 
 def image_with_cache(qid, image_filename, width):
     filename = f'cache/{qid}_{width}_image.json'
@@ -577,6 +577,8 @@ def next_page(item_id):
                 continue
             value = claim['mainsnak']['datavalue']['value']
             claim_qid = value['id']
+            if claim_qid == 'Q4233718':
+                continue  # anonymous artist
             numeric_id = value['numeric-id']
             href = url_for('find_more_page', property_id=key[1:], item_id=numeric_id)
             values.append({
