@@ -18,9 +18,11 @@
     {% for edit in edit_list %}
     <tr>
       <td><a href="{{ edit.user_page_url }}">{{ edit.username }}</a></td>
-      <td>{{ edit.painting_qid }}</td>
-      <td>{{ depicts_items[edit.depicts_id].label }} ({{ edit.depicts_qid }})</td>
-      <td>{{ edit.timestamp }}</td>
+      <td><a href="https://www.wikidata.org/wiki/{{ edit.painting_qid }}">{{ edit.painting.label }}</a>
+          ({{ edit.painting_qid }})</td>
+      <td><a href="https://www.wikidata.org/wiki/{{ edit.depicts_qid }}">{{ edit.depicts.label }}</a>
+          ({{ edit.depicts_qid }})</td>
+      <td>{{ edit.timestamp.strftime('%H:%M %a, %d %b %Y') }}</td>
     </tr>
     {% endfor %}
     </tbody>
