@@ -321,7 +321,7 @@ def oauth_api_request(params):
                           client_secret=client_secret,
                           resource_owner_key=session['owner_key'],
                           resource_owner_secret=session['owner_secret'])
-    r = oauth.get(url)
+    r = oauth.get(url, timeout=2)
     reply = r.json()
 
     return reply
@@ -349,7 +349,7 @@ def get_token():
         'format': 'json',
         'formatversion': 2,
     }
-    reply = oauth_api_request(params, timeout=2)
+    reply = oauth_api_request(params)
     token = reply['query']['tokens']['csrftoken']
 
     return token
