@@ -3,7 +3,11 @@
 {% block content %}
 <div class="p-2">
 
-  <p>This tool has been used to save {{ edits.count() }} edits.</p>
+  <p>This tool has been used to add a total of {{ edits.count() }} depicts statements.</p>
+
+  <p>{{ user_count }} users have tried this tool.</p>
+
+  <p>{{ painting_count }} paintings have been cataloged.</p>
 
   <table class="table w-auto">
     <thead>
@@ -22,7 +26,7 @@
           ({{ edit.painting_qid }})</td>
       <td><a href="https://www.wikidata.org/wiki/{{ edit.depicts_qid }}">{{ edit.depicts.label }}</a>
           ({{ edit.depicts_qid }})</td>
-      <td>{{ edit.timestamp.strftime('%H:%M %a, %d %b %Y') }}</td>
+      <td>{{ edit.timestamp.strftime('%Y %b %d %H:%M') }}</td>
     </tr>
     {% endfor %}
     </tbody>

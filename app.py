@@ -9,6 +9,7 @@ from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
 from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
+from sqlalchemy import func, distinct
 import requests.exceptions
 import requests
 import lxml.html
@@ -496,7 +497,20 @@ def get_other(entity):
 @app.route("/admin/edits")
 def list_edits():
     edit_list = Edit.query.order_by(Edit.timestamp)
-    return render_template('list_edits.html', edits=Edit.query, edit_list=edit_list)
+
+    painting_count = (database.session
+                              .query(func.count(distinct(Edit.painting_id)))
+                              .scalar())
+
+    user_count = (database.session
+                          .query(func.count(distinct(Edit.username)))
+                          .scalar())
+
+    return render_template('list_edits.html',
+                           edits=Edit.query,
+                           edit_list=edit_list,
+                           painting_count=painting_count,
+                           user_count=user_count)
 
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
