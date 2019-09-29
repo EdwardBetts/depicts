@@ -147,8 +147,7 @@ def save(item_id):
         label = get_entity_label(painting_entity)
         painting_item = PaintingItem(item_id=item_id, label=label, entity=painting_entity)
         database.session.add(painting_item)
-
-    database.session.add(item)
+        database.session.commit()
 
     for depicts_qid in depicts:
         depicts_id = int(depicts_qid[1:])
