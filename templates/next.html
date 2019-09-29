@@ -19,18 +19,24 @@
   <a href="{{ url_for('browse_page') }}">browse paintings</a>
   </p>
 
+  {% raw %}
 
+  <div id="app">
+    <div v-for="prop in other_props">
+        <h3>{{ prop['label'] }} ({{ prop['pid'] }})</h3>
+        <span v-for="value in prop['values']">
+          <a :href="value['href']">{{ value['label'] }}</a> ({{ value['qid'] }})
+        </span>
 
-    {% for key, prop_label in labels.items() %}
-      {% set claims = entity['claims'][key] %}
-      {% if claims %}
-        <h3>{{ prop_label }} ({{ key }})</h3>
-        {% for claim in claims %}
-          {% set claim_qid = claim.mainsnak.datavalue.value.id %}
-          <a href="{{ url_for('find_more_page', property_id=key[1:], item_id=claim_qid[1:]) }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
-        {% endfor %}
-      {% endif %}
-    {% endfor %}
+        <div>
+          <span v-for="image in prop.images">
+            <a :href="image.href"><img :src="image.image.thumburl" /></a>
+          </span>
+        </div>
+    </div>
+
+  </div>
+  {% endraw %}
 
   </div>
 
@@ -38,4 +44,12 @@
     <img src="{{ image.thumburl }}">
   </div>
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+  var other_props = {{ other_props | tojson }};
+</script>
+<script src="{{ url_for('static', filename='vue/vue.js') }}"></script>
+<script src="{{ url_for('static', filename='js/next.js') }}"></script>
 {% endblock %}

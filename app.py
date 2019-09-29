@@ -71,6 +71,17 @@ select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?time ?timeprecision 
 }
 '''
 
+find_more_basic_query = '''
+select ?item ?itemLabel ?image ?artist {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  VALUES ?value { LIST }
+  ?item wdt:P31 wd:Q3305213 .
+  ?item wdt:PID ?value .
+  ?item wdt:P18 ?image .
+  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
+} limit LIMIT
+'''
+
 facet_query = '''
 select ?property ?object ?objectLabel (count(*) as ?count) {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
@@ -548,13 +559,45 @@ def next_page(item_id):
     label = get_entity_label(entity)
     other = get_other(entity)
 
+    other_list = []
+    for key, prop_label in find_more_props.items():
+        if key == 'P186':  # skip material used
+            continue       # too generic
+        claims = entity['claims'].get(key)
+        if not claims:
+            continue
+
+        values = []
+
+        for claim in claims:
+            value = claim['mainsnak']['datavalue']['value']
+            claim_qid = value['id']
+            numeric_id = value['numeric-id']
+            href = url_for('find_more_page', property_id=key[1:], item_id=numeric_id)
+            values.append({
+                'href': href,
+                'qid': claim_qid,
+                'label': other.get(claim_qid),
+            })
+
+        qid_list = [v['qid'] for v in values]
+
+        other_list.append({
+            'label': prop_label,
+            'image_lookup': url_for('find_more_json', pid=key, qid=qid_list),
+            'pid': key,
+            'values': values,
+            'images': [],
+        })
+
     return render_template('next.html',
                            qid=qid,
                            label=label,
                            image=image,
                            labels=find_more_props,
                            other=other,
-                           entity=entity)
+                           entity=entity,
+                           other_props=other_list)
 
 @app.route('/P<int:property_id>/Q<int:item_id>')
 def find_more_page(property_id, item_id):
@@ -651,6 +694,40 @@ def browse_page():
                            bindings=bindings,
                            total=len(bindings),
                            items=items)
+
+@app.route('/find_more.json')
+def find_more_json():
+    pid = request.args.get('pid')
+    qid_list = request.args.getlist('qid')
+    limit = 6
+
+    value_list = ' '.join(f'wd:{qid}' for qid in qid_list)
+
+    q = (find_more_basic_query
+         .replace('LIST', value_list)
+         .replace('PID', pid)
+         .replace('LIMIT', str(limit)))
+
+    filenames = []
+    bindings = wdqs.run_query_with_cache(q, f'{pid}={",".join(qid_list)}_{limit}')
+    items = []
+    for row in bindings:
+        item_id = wdqs.row_id(row)
+        row_qid = f'Q{item_id}'
+        image_filename = wdqs.commons_uri_to_filename(row['image']['value'])
+        filenames.append(image_filename)
+        items.append({'qid': row_qid,
+                      'item_id': item_id,
+                      'href': url_for('item_page', item_id=item_id),
+                      'filename': image_filename})
+
+    thumbheight = 120
+    detail = commons.image_detail(filenames, thumbheight=thumbheight)
+
+    for item in items:
+        item['image'] = detail[item['filename']]
+
+    return jsonify(items=items, q=q)
 
 @app.route('/lookup')
 def depicts_lookup():
