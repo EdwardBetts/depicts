@@ -484,6 +484,10 @@ def get_other(entity):
 
     return get_labels(other_items)
 
+@app.route("/admin/edits")
+def list_edits():
+    return render_template('list_edits.html', edits=Edit.query)
+
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
     qid = f'Q{item_id}'

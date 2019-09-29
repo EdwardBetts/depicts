@@ -5,6 +5,7 @@ from sqlalchemy.types import Integer, String, DateTime
 from sqlalchemy.orm import column_property, relationship
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import cast
+from urllib.parse import quote
 
 Base = declarative_base()
 Base.query = session.query_property()
@@ -40,3 +41,11 @@ class Edit(Base):
     painting_id = Column(Integer, primary_key=True)
     depicts_id = Column(Integer, primary_key=True)
     timestamp = Column(DateTime, default=now_utc())
+
+    painting_qid = column_property('Q' + cast(painting_id, String))
+    depicts_qid = column_property('Q' + cast(depicts_id, String))
+
+    @property
+    def user_page_url(self):
+        start = 'https://www.wikidata.org/wiki/User:'
+        return start + quote(self.username.replace(' ', '_'))

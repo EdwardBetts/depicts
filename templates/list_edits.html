@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-2">
+
+  <p>This tool has been used to save {{ edits.count() }} edits.</p>
+
+  <table class="table w-auto">
+    <thead>
+      <tr>
+        <th>username</th>
+        <th>painting</th>
+        <th>depicts</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for edit in edits %}
+    <tr>
+      <td><a href="{{ edit.user_page_url }}">{{ edit.username }}</a></td>
+      <td>{{ edit.painting_qid }}</td>
+      <td>{{ edit.depicts_qid }}</td>
+      <td>{{ edit.timestamp }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+
+</div>
+
+{% endblock %}
