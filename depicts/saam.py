@@ -27,10 +27,12 @@ def parse_html(html):
 
 def get_catalog(saam_id):
     data = parse_html(get_html(saam_id))
-    return {
+    ret = {
         'institution': 'Smithsonian American Art Museum',
         'keywords': data['keywords'],
-        'description': data['ld']['description']
     }
+    if 'description' in data['ld']:
+        ret['description'] = data['ld']['description']
+    return ret
 
 
