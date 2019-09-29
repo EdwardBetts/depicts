@@ -4,7 +4,7 @@ from flask import Flask, render_template, url_for, redirect, request, g, jsonify
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
                      wd_catalog)
-from depicts.model import DepictsItem, DepictsItemAltLabel, Edit
+from depicts.model import DepictsItem, DepictsItemAltLabel, Edit, PaintingItem
 from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
 from werkzeug.exceptions import InternalServerError
@@ -147,9 +147,13 @@ def save(item_id):
         if 'error' in reply:
             return 'error:' + r.text
         print(r.text)
+        saved = r.json()
+        lastrevid = saved['pageinfo']['lastrevid']
+        assert saved['success'] == 1
         edit = Edit(username=username,
                     painting_id=item_id,
-                    depicts_id=depicts_id)
+                    depicts_id=depicts_id,
+                    lastrevid=lastrevid)
         database.session.add(edit)
         database.session.commit()
 
@@ -386,6 +390,11 @@ def item_page(item_id):
     # hits = item.run_query()
     label = get_entity_label(entity)
     other = get_other(item.entity)
+
+    painting_item = PaintingItem.get(item_id)
+    if painting_item is None:
+        painting_item = PaintingItem(item_id=item_id, label=label, entity=entity)
+        database.session.add(painting_item)
 
     catalog_ids = wd_catalog.find_catalog_id(entity)
     catalog_detail = []
