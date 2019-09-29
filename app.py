@@ -6,6 +6,7 @@ from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      wd_catalog)
 from depicts.pager import Pagination, init_pager
 from depicts.model import DepictsItem, DepictsItemAltLabel, Edit, PaintingItem
+from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
 from werkzeug.exceptions import InternalServerError
@@ -26,6 +27,7 @@ app = Flask(__name__)
 app.config.from_object('config.default')
 database.init_db(app.config['DB_URL'])
 init_pager(app)
+setup_error_mail(app)
 
 find_more_props = {
     'P135': 'movement',
