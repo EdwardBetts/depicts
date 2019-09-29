@@ -512,6 +512,21 @@ def list_edits():
                            painting_count=painting_count,
                            user_count=user_count)
 
+@app.route("/user/<username>")
+def user_page(username):
+    edit_list = Edit.query.filter_by(username=username).order_by(Edit.timestamp)
+
+    painting_count = (database.session
+                              .query(func.count(distinct(Edit.painting_id)))
+                              .filter_by(username=username)
+                              .scalar())
+
+    return render_template('user_page.html',
+                           username=username,
+                           edits=Edit.query,
+                           edit_list=edit_list,
+                           painting_count=painting_count)
+
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
     qid = f'Q{item_id}'
