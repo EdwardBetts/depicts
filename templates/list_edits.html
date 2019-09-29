@@ -11,14 +11,15 @@
         <th>username</th>
         <th>painting</th>
         <th>depicts</th>
+        <th>when</th>
       </tr>
     </thead>
     <tbody>
-    {% for edit in edits %}
+    {% for edit in edit_list %}
     <tr>
       <td><a href="{{ edit.user_page_url }}">{{ edit.username }}</a></td>
       <td>{{ edit.painting_qid }}</td>
-      <td>{{ edit.depicts_qid }}</td>
+      <td>{{ depicts_items[edit.depicts_id].label }} ({{ edit.depicts_qid }})</td>
       <td>{{ edit.timestamp }}</td>
     </tr>
     {% endfor %}

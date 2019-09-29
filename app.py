@@ -486,7 +486,18 @@ def get_other(entity):
 
 @app.route("/admin/edits")
 def list_edits():
-    return render_template('list_edits.html', edits=Edit.query)
+    # edit_count = Edit.query.count()
+    edit_list = Edit.query.order_by(Edit.timestamp)
+
+    depicts_ids = {edit.depicts_id for edit in Edit.query}
+
+    q = DepictsItem.query.filter(DepictsItem.item_id.in_(depicts_ids))
+    depicts_items = {item.item_id: item for item in q}
+
+    return render_template('list_edits.html',
+                           edits=Edit.query,
+                           depicts_items=depicts_items,
+                           edit_list=edit_list)
 
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
