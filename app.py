@@ -391,7 +391,7 @@ def item_page(item_id):
     label = get_entity_label(entity)
     other = get_other(item.entity)
 
-    painting_item = PaintingItem.get(item_id)
+    painting_item = PaintingItem.query.get(item_id)
     if painting_item is None:
         painting_item = PaintingItem(item_id=item_id, label=label, entity=entity)
         database.session.add(painting_item)
