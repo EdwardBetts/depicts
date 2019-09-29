@@ -141,6 +141,15 @@ def save(item_id):
 
     token = get_token()
 
+    painting_item = PaintingItem.query.get(item_id)
+    if painting_item is None:
+        painting_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
+        label = get_entity_label(painting_entity)
+        painting_item = PaintingItem(item_id=item_id, label=label, entity=painting_entity)
+        database.session.add(painting_item)
+
+    database.session.add(item)
+
     for depicts_qid in depicts:
         depicts_id = int(depicts_qid[1:])
         r = create_claim(item_id, depicts_id, token)
