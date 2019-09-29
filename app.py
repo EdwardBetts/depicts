@@ -388,7 +388,7 @@ def get_catalog_page(property_id, value):
     if os.path.exists(filename):
         html = open(filename).read()
     else:
-        r = requests.get(url, headers={'User-Agent': user_agent})
+        r = requests.get(url, headers={'User-Agent': user_agent}, timeout=2)
         html = r.text
         open(filename, 'w').write(html)
 
@@ -429,38 +429,41 @@ def item_page(item_id):
     catalog_url = first_datavalue(entity, 'P973')
 
     catalog = None
-    if 'P4704' in entity['claims']:
-        saam_id = first_datavalue(entity, 'P4704')
-        catalog = saam.get_catalog(saam_id)
-    elif 'P4709' in entity['claims']:
-        catalog_id = first_datavalue(entity, 'P4709')
-        catalog = barnesfoundation.get_catalog(catalog_id)
-    elif catalog_url and 'www.dia.org' in catalog_url:
-        catalog = dia.get_catalog(catalog_url)
-    elif catalog_url and 'www.rijksmuseum.nl' in catalog_url:
-        catalog = rijksmuseum.get_catalog(catalog_url)
-    elif catalog_url and 'www.npg.org.uk' in catalog_url:
-        catalog = npg.get_catalog(catalog_url)
-    elif catalog_url and 'www.museodelprado.es' in catalog_url:
-        catalog = museodelprado.get_catalog(catalog_url)
+    try:
+        if 'P4704' in entity['claims']:
+            saam_id = first_datavalue(entity, 'P4704')
+            catalog = saam.get_catalog(saam_id)
+        elif 'P4709' in entity['claims']:
+            catalog_id = first_datavalue(entity, 'P4709')
+            catalog = barnesfoundation.get_catalog(catalog_id)
+        elif catalog_url and 'www.dia.org' in catalog_url:
+            catalog = dia.get_catalog(catalog_url)
+        elif catalog_url and 'www.rijksmuseum.nl' in catalog_url:
+            catalog = rijksmuseum.get_catalog(catalog_url)
+        elif catalog_url and 'www.npg.org.uk' in catalog_url:
+            catalog = npg.get_catalog(catalog_url)
+        elif catalog_url and 'www.museodelprado.es' in catalog_url:
+            catalog = museodelprado.get_catalog(catalog_url)
 
-    if not catalog and catalog_ids:
-        for property_id in sorted(catalog_ids):
-            if property_id == 'P350':
-                continue  # RKDimages ID
-            value = first_datavalue(entity, property_id)
-            detail = wd_catalog.lookup(property_id, value)
-            try:
-                html = get_catalog_page(property_id, value)
-            except requests.exceptions.SSLError:
-                continue  # ignore this error
-            description = get_description_from_page(html)
-            if not description:
-                continue
-            catalog = {
-                'institution': detail['label'],
-                'description': description,
-            }
+        if not catalog and catalog_ids:
+            for property_id in sorted(catalog_ids):
+                if property_id == 'P350':
+                    continue  # RKDimages ID
+                value = first_datavalue(entity, property_id)
+                detail = wd_catalog.lookup(property_id, value)
+                try:
+                    html = get_catalog_page(property_id, value)
+                except requests.exceptions.SSLError:
+                    continue  # ignore this error
+                description = get_description_from_page(html)
+                if not description:
+                    continue
+                catalog = {
+                    'institution': detail['label'],
+                    'description': description,
+                }
+    except requests.exceptions.ReadTimeout:
+        pass
 
     return render_template('item.html',
                            qid=qid,
