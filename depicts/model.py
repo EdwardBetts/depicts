@@ -58,6 +58,9 @@ class Edit(Base):
     depicts = relationship('DepictsItem')
 
     @property
-    def user_page_url(self):
-        start = 'https://www.wikidata.org/wiki/User:'
-        return start + quote(self.username.replace(' ', '_'))
+    def url_norm_username(self):
+        return quote(self.username.replace(' ', '_'))
+
+    @property
+    def user_wikidata_url(self):
+        return 'https://www.wikidata.org/wiki/User:' + self.url_norm_username
