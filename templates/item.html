@@ -43,8 +43,12 @@
           <div>
           <strong>{{ prop_label }}</strong>:
           {% for claim in claims %}
-            {% set claim_qid = claim.mainsnak.datavalue.value.id %}
-            <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+            {% if 'datavalue' in claim.mainsnak %}
+              {% set claim_qid = claim.mainsnak.datavalue.value.id %}
+              <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+            {% else %}
+              <i>no value</i>
+            {% endif %}
           {% endfor %}
           </div>
         {% endif %}
