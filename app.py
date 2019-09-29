@@ -7,6 +7,8 @@ from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
 from depicts.model import DepictsItem, DepictsItemAltLabel, Edit
 from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
+from werkzeug.exceptions import InternalServerError
+from werkzeug.debug.tbtools import get_current_traceback
 import requests.exceptions
 import requests
 import lxml.html
@@ -106,6 +108,11 @@ select distinct ?item where {
   filter not exists { ?item wdt:P180 ?depicts }
 }
 '''
+
+@app.errorhandler(InternalServerError)
+def exception_handler(e):
+    tb = get_current_traceback()
+    return render_template('show_error.html', tb=tb), 500
 
 @app.template_global()
 def set_url_args(**new_args):
