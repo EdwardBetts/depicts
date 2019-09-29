@@ -1,3 +1,4 @@
+{% from "macro.html" import render_pagination %}
 {% extends "base.html" %}
 
 {% block title %}{{ label }}{% endblock %}
@@ -51,11 +52,7 @@
   {% endfor %}
 </div>
 
-{#
-  {% for item in items %}
-  <pre>{{ item | pprint }}</pre>
-  {% endfor %}
-#}
+{{ render_pagination(pager) }}
 
 </div>
 {% endblock %}

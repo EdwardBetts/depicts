@@ -1,3 +1,4 @@
+from flask import request
 from itertools import islice
 import urllib.parse
 import inflect
@@ -70,4 +71,6 @@ def wiki_url(title, site, ns=None):
 
     return f'https://{host}/wiki/' + url_ns + urllib.parse.quote(title.replace(' ', '_'))
 
-
+def get_int_arg(name):
+    if name in request.args and request.args[name].isdigit():
+        return int(request.args[name])

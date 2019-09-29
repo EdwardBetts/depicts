@@ -4,6 +4,7 @@ from flask import Flask, render_template, url_for, redirect, request, g, jsonify
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
                      wd_catalog)
+from depicts.pager import Pagination, init_pager
 from depicts.model import DepictsItem, DepictsItemAltLabel, Edit, PaintingItem
 from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
@@ -24,6 +25,7 @@ user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0
 app = Flask(__name__)
 app.config.from_object('config.default')
 database.init_db(app.config['DB_URL'])
+init_pager(app)
 
 find_more_props = {
     'P135': 'movement',
@@ -664,20 +666,24 @@ def browse_page():
     page_size = 45
 
     item_map = wdqs.build_browse_item_map(bindings)
-    items = []
+
+    all_items = []
     for item in item_map.values():
         if len(item['image_filename']) != 1:
             continue
         item['image_filename'] = item['image_filename'][0]
-        items.append(item)
-        if len(items) >= page_size:
-            break
+        all_items.append(item)
+
+    page = utils.get_int_arg('page') or 1
+    pager = Pagination(page, page_size, len(all_items))
+
+    items = pager.slice(all_items)
 
     filenames = [cur['image_filename'] for cur in items]
 
     thumbwidth = app.config['THUMBWIDTH']
 
-    filename = f'cache/{flat}_{page_size}_images.json'
+    filename = f'cache/{flat}_{page}_{page_size}_images.json'
     if os.path.exists(filename):
         detail = json.load(open(filename))
     else:
@@ -694,6 +700,8 @@ def browse_page():
                            facets=facets,
                            prop_labels=find_more_props,
                            label=title,
+                           pager=pager,
+                           page=page,
                            labels=find_more_props,
                            bindings=bindings,
                            total=len(bindings),
