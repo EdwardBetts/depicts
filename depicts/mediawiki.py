@@ -18,7 +18,7 @@ def api_call(params, api_url=wikidata_url):
         **params,
     }
 
-    r = requests.get(api_url, params=call_params)
+    r = requests.get(api_url, params=call_params, timeout=2)
     return r
 
 def get_entity(qid):
