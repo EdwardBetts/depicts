@@ -479,7 +479,8 @@ def get_other(entity):
         if key not in entity['claims']:
             continue
         for claim in entity['claims'][key]:
-            other_items.add(claim['mainsnak']['datavalue']['value']['id'])
+            if 'datavalue' in claim['mainsnak']:
+                other_items.add(claim['mainsnak']['datavalue']['value']['id'])
 
     return get_labels(other_items)
 
