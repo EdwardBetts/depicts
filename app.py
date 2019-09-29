@@ -72,8 +72,7 @@ select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?time ?timeprecision 
 '''
 
 find_more_basic_query = '''
-select ?item ?itemLabel ?image ?artist {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+select distinct ?item ?image {
   VALUES ?value { LIST }
   ?item wdt:P31 wd:Q3305213 .
   ?item wdt:PID ?value .
@@ -570,6 +569,8 @@ def next_page(item_id):
         values = []
 
         for claim in claims:
+            if 'datavalue' not in claim['mainsnak']:
+                continue
             value = claim['mainsnak']['datavalue']['value']
             claim_qid = value['id']
             numeric_id = value['numeric-id']
@@ -579,6 +580,9 @@ def next_page(item_id):
                 'qid': claim_qid,
                 'label': other.get(claim_qid),
             })
+
+        if not values:
+            continue
 
         qid_list = [v['qid'] for v in values]
 
