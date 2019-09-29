@@ -5,6 +5,7 @@ from sqlalchemy.types import Integer, String, DateTime
 from sqlalchemy.orm import column_property, relationship
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import cast
+from sqlalchemy.dialects import postgresql
 from urllib.parse import quote
 
 Base = declarative_base()
@@ -35,15 +36,26 @@ class DepictsItemAltLabel(Base):
     def __init__(self, alt_label):
         self.alt_label = alt_label
 
+class PaintingItem(Base):
+    __tablename__ = 'painting'
+    item_id = Column(Integer, primary_key=True, autoincrement=False)
+    label = Column(String)
+    entity = Column(postgresql.JSON)
+    qid = column_property('Q' + cast(item_id, String))
+
 class Edit(Base):
     __tablename__ = 'edit'
     username = Column(String, primary_key=True)
-    painting_id = Column(Integer, primary_key=True)
-    depicts_id = Column(Integer, primary_key=True)
+    painting_id = Column(Integer, ForeignKey('painting.item_id'), primary_key=True)
+    depicts_id = Column(Integer, ForeignKey('depicts.item_id'), primary_key=True)
     timestamp = Column(DateTime, default=now_utc())
+    lastrevid = Column(Integer, nullable=True)
 
     painting_qid = column_property('Q' + cast(painting_id, String))
     depicts_qid = column_property('Q' + cast(depicts_id, String))
+
+    painting = relationship('PaintingItem')
+    depicts = relationship('DepictsItem')
 
     @property
     def user_page_url(self):
