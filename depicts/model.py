@@ -2,7 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from .database import session, now_utc
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String, DateTime
-from sqlalchemy.orm import column_property, relationship
+from sqlalchemy.orm import column_property, relationship, synonym
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.dialects import postgresql
@@ -42,6 +42,20 @@ class PaintingItem(Base):
     label = Column(String)
     entity = Column(postgresql.JSON)
     qid = column_property('Q' + cast(item_id, String))
+
+class Language(Base):
+    __tablename__ = 'language'
+    item_id = Column(Integer, primary_key=True, autoincrement=False)
+    wikimedia_language_code = Column(String, index=True, unique=True)
+    en_label = Column(String, nullable=False)
+
+    code = synonym('wikimedia_language_code')
+    label = synonym('en_label')
+
+    @classmethod
+    def get_by_code(cls, code):
+        return cls.query.filter_by(wikimedia_language_code=code).one()
+
 
 class Edit(Base):
     __tablename__ = 'edit'

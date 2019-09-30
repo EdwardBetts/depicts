@@ -13,6 +13,14 @@
   <div class="d-flex">
       <div class="p-2 flex-fill">
         <h1>{{ self.title() }}</h1>
+        <p>Label from:
+        {% for lang in label_languages %}
+          {{ lang.label }} ({{ lang.code }})
+          {% if show_translation_links %}
+            <a href="https://translate.google.com/#view=home&op=translate&sl={{lang.code}}&tl=en&text={{label}}" target="translation">[translate]</a>
+          {% endif %}
+        {% endfor %}
+        </p>
 
   <p>
   <a href="https://www.wikidata.org/wiki/{{ qid }}">view this painting on Wikidata</a>

@@ -5,13 +5,15 @@ from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
                      wd_catalog)
 from depicts.pager import Pagination, init_pager
-from depicts.model import DepictsItem, DepictsItemAltLabel, Edit, PaintingItem
+from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
+                           Language)
 from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
 from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
+from collections import defaultdict
 import requests.exceptions
 import requests
 import lxml.html
@@ -123,6 +125,10 @@ select distinct ?item where {
   filter not exists { ?item wdt:P180 ?depicts }
 }
 '''
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    database.session.remove()
 
 @app.errorhandler(InternalServerError)
 def exception_handler(e):
@@ -411,7 +417,8 @@ def item_page(item_id):
     image = image_with_cache(qid, image_filename, width)
 
     # hits = item.run_query()
-    label = get_entity_label(entity)
+    label_and_language = get_entity_label_and_language(entity)
+    label = label_and_language['label']
     other = get_other(item.entity)
 
     painting_item = PaintingItem.query.get(item_id)
@@ -465,6 +472,8 @@ def item_page(item_id):
     except requests.exceptions.ReadTimeout:
         pass
 
+    label_languages = label_and_language['languages']
+    show_translation_links = all(lang.code != 'en' for lang in label_languages)
     return render_template('item.html',
                            qid=qid,
                            item_id=item_id,
@@ -476,6 +485,8 @@ def item_page(item_id):
                            entity=item.entity,
                            username=get_username(),
                            label=label,
+                           label_languages=label_languages,
+                           show_translation_links=show_translation_links,
                            image=image,
                            other=other,
                            # hits=hits,
@@ -488,6 +499,32 @@ def get_entity_label(entity):
     label_values = {l['value'] for l in entity['labels'].values()}
     if len(label_values) == 1:
         return list(label_values)[0]
+
+def get_languages(codes):
+    return Language.query.filter(Language.wikimedia_language_code.in_(codes))
+
+def get_entity_label_and_language(entity):
+    '''
+    Look for a useful label and return it with a list of languages that have that label.
+
+    If the entity has a label in English return it.
+
+    Otherwise check if all languages have the same label, if so then return it.
+    '''
+
+    group_by_label = defaultdict(set)
+    for language, l in entity['labels'].items():
+        group_by_label[l['value']].add(language)
+
+    if 'en' in entity['labels']:
+        label = entity['labels']['en']['value']
+        return {'label': label,
+                'languages': get_languages(group_by_label[label])}
+
+    if len(group_by_label) == 1:
+        label, languages = list(group_by_label.items())[0]
+        return {'label': label,
+                'languages': get_languages(languages)}
 
 def get_labels(keys, name=None):
     keys = sorted(keys, key=lambda i: int(i[1:]))
