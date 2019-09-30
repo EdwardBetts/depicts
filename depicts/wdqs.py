@@ -100,6 +100,7 @@ def build_browse_item_map(bindings):
         filenames = set()
         artist_names = []
         labels = set()
+        when = None
         for item in items:
             if 'title' in item:
                 lang, title = item['title']
@@ -110,12 +111,15 @@ def build_browse_item_map(bindings):
                 artist_names.append(artist_name)
             if 'label' in item:
                 labels.add(item['label'])
+            if when is None and item.get('date'):
+                when = item['date']
 
         item = {
             'qid': f'Q{item_id}',
             'item_id': item_id,
             'image_filename': list(filenames),
             'artist_name': ', '.join(artist_names),
+            'date': when,
         }
         if artist_names:
             item['artist_name'] = ', '.join(artist_names)
