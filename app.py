@@ -3,7 +3,7 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog)
+                     wd_catalog, relaxed_ssl)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -14,6 +14,7 @@ from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
 from collections import defaultdict
+import hashlib
 import requests.exceptions
 import requests
 import lxml.html
@@ -400,11 +401,46 @@ def get_catalog_page(property_id, value):
 
     return html
 
+def get_catalog_url(url):
+    md5_filename = hashlib.md5(url.encode('utf-8')).hexdigest() + '.html'
+    filename = 'cache/' + md5_filename
+
+    if os.path.exists(filename):
+        html = open(filename).read()
+    else:
+        r = relaxed_ssl.get(url,
+                            headers={'User-Agent': user_agent},
+                            timeout=2)
+        html = r.text
+        open(filename, 'w').write(html)
+
+    return html
+
 def get_description_from_page(html):
     root = lxml.html.fromstring(html)
     div = root.find('.//div[@itemprop="description"]')
     if div is not None:
         return div.text
+
+    meta_twitter_description = root.find('.//meta[@name="twitter:description"]')
+    twitter_description = meta_twitter_description.get('content')
+    if not twitter_description:
+        return
+    twitter_description = twitter_description.strip()
+
+    if not twitter_description:
+        return
+
+    for element in root.getiterator():
+        if not element.text:
+            continue
+        text = element.text.strip()
+        if not text:
+            continue
+        if text != twitter_description and text.startswith(twitter_description):
+            return text
+
+    return twitter_description
 
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
@@ -420,6 +456,15 @@ def item_page(item_id):
     label_and_language = get_entity_label_and_language(entity)
     label = label_and_language['label']
     other = get_other(item.entity)
+
+    if 'P276' in entity['claims']:
+        location = first_datavalue(entity, 'P276')['id']
+        institution = other[location]
+    elif 'P195' in entity['claims']:
+        collection = first_datavalue(entity, 'P195')['id']
+        institution = other[collection]
+    else:
+        institution = '???'
 
     painting_item = PaintingItem.query.get(item_id)
     if painting_item is None:
@@ -451,6 +496,14 @@ def item_page(item_id):
             catalog = npg.get_catalog(catalog_url)
         elif catalog_url and 'www.museodelprado.es' in catalog_url:
             catalog = museodelprado.get_catalog(catalog_url)
+
+        if not catalog and catalog_url:
+            html = get_catalog_url(catalog_url)
+            description = get_description_from_page(html)
+            catalog = {
+                'institution': institution,
+                'description': description,
+            }
 
         if not catalog and catalog_ids:
             for property_id in sorted(catalog_ids):
