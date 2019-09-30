@@ -423,6 +423,8 @@ def get_description_from_page(html):
         return div.text
 
     meta_twitter_description = root.find('.//meta[@name="twitter:description"]')
+    if meta_twitter_description is None:
+        return
     twitter_description = meta_twitter_description.get('content')
     if not twitter_description:
         return
