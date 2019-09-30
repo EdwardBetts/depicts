@@ -62,7 +62,7 @@ find_more_props = {
 }
 
 find_more_query = '''
-select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?time ?timeprecision {
+select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?timeprecision {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
   ?item wdt:P31 wd:Q3305213 .
   PARAMS
@@ -72,7 +72,10 @@ select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?time ?timeprecision 
     ?timenode wikibase:timeValue         ?time.
     ?timenode wikibase:timePrecision     ?timeprecision.
   }
-  OPTIONAL { ?item wdt:P1476 ?title }
+  OPTIONAL {
+    ?item wdt:P1476 ?title .
+    BIND(LANG(?title) as ?titleLang)
+  }
   OPTIONAL { ?item wdt:P170 ?artist }
   FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
 }
@@ -456,7 +459,10 @@ def item_page(item_id):
 
     # hits = item.run_query()
     label_and_language = get_entity_label_and_language(entity)
-    label = label_and_language['label']
+    if label_and_language:
+        label = label_and_language['label']
+    else:
+        label = None
     other = get_other(item.entity)
 
     if 'P276' in entity['claims']:
@@ -528,7 +534,7 @@ def item_page(item_id):
     except requests.exceptions.ReadTimeout:
         pass
 
-    label_languages = label_and_language['languages']
+    label_languages = label_and_language['languages'] if label_and_language else []
     show_translation_links = all(lang.code != 'en' for lang in label_languages)
     return render_template('item.html',
                            qid=qid,
@@ -748,12 +754,7 @@ def browse_page():
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
 
-    # item_entity = get_entity_with_cache(qid)
-
     item_labels = get_labels(qid for pid, qid in params)
-
-    # property_keys = item_entity['claims'].keys()
-    # property_labels = get_labels(property_keys, name=f'{flat}_property_labels')
 
     sparql_params = ''.join(
         f'?item wdt:{pid} wd:{qid} .\n' for pid, qid in params)
@@ -801,10 +802,11 @@ def browse_page():
                            prop_labels=find_more_props,
                            label=title,
                            pager=pager,
+                           item_map=item_map,
                            page=page,
                            labels=find_more_props,
                            bindings=bindings,
-                           total=len(bindings),
+                           total=len(item_map),
                            items=items)
 
 @app.route('/find_more.json')

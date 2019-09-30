@@ -4,6 +4,7 @@ import urllib.parse
 import os
 import dateutil.parser
 import hashlib
+from collections import defaultdict
 from . import utils
 
 query_url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
@@ -65,32 +66,63 @@ def format_time(row_time, row_timeprecision):
     return row_time['value']
 
 def build_browse_item_map(bindings):
-    item_map = {}
+    row_map = defaultdict(list)
+
     for row in bindings:
         item_id = row_id(row)
-        row_qid = f'Q{item_id}'
         label = row['itemLabel']['value']
         image_filename = commons_uri_to_filename(row['image']['value'])
-        if item_id in item_map:
-            item = item_map[item_id]
-            item['image_filename'].append(image_filename)
-            continue
 
-        if label == row_qid:
-            label = get_row_value(row, 'title') or 'name missing'
-
-        artist_name = get_row_value(row, 'artistLabel') or '[artist unknown]'
+        artist_name = get_row_value(row, 'artistLabel')
 
         d = format_time(row['time'], row['timeprecision']) if 'time' in row else None
+        row_qid = f'Q{item_id}'
 
         item = {
-            'image_filename': [image_filename],
-            'item_id': item_id,
-            'qid': row_qid,
-            'label': label,
+            'image_filename': image_filename,
             'date': d,
             'artist_name': artist_name,
         }
+        if label != row_qid:
+            item['label'] = label
+
+        title = get_row_value(row, 'title')
+        if title:
+            lang = get_row_value(row, 'titleLang')
+            item['title'] = (lang, title)
+
+        row_map[item_id].append(item)
+
+    item_map = {}
+    for item_id, items in row_map.items():
+        titles = {}
+        filenames = set()
+        artist_names = []
+        labels = set()
+        for item in items:
+            if 'title' in item:
+                lang, title = item['title']
+                titles[lang] = title
+            filenames.add(item['image_filename'])
+            if item['artist_name'] not in artist_names:
+                artist_names.append(item['artist_name'])
+            if 'label' in item:
+                labels.add(item['label'])
+
+        item = {
+            'qid': f'Q{item_id}',
+            'item_id': item_id,
+            'image_filename': list(filenames),
+            'artist_name': ', '.join(artist_names),
+        }
+        if labels:
+            assert len(labels) == 1
+            item['label'] = list(labels)[0]
+        elif 'en' in titles:
+            item['label'] = titles['en']
+        else:
+            item['label'] = '[ label missing ]'
+
         item_map[item_id] = item
 
     return item_map
