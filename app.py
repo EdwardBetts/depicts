@@ -502,10 +502,11 @@ def item_page(item_id):
         if not catalog and catalog_url:
             html = get_catalog_url(catalog_url)
             description = get_description_from_page(html)
-            catalog = {
-                'institution': institution,
-                'description': description,
-            }
+            if description:
+                catalog = {
+                    'institution': institution,
+                    'description': description,
+                }
 
         if not catalog and catalog_ids:
             for property_id in sorted(catalog_ids):
