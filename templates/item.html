@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ label }} ({{qid }}){% endblock %}
+{% block title %}{{ label or 'no label' }} ({{qid }}){% endblock %}
 
 {% block style %}
 <style>
@@ -13,6 +13,7 @@
   <div class="d-flex">
       <div class="p-2 flex-fill">
         <h1>{{ self.title() }}</h1>
+        {% if label_languages %}
         <p>Label from:
         {% for lang in label_languages %}
           {{ lang.label }} ({{ lang.code }})
@@ -21,6 +22,7 @@
           {% endif %}
         {% endfor %}
         </p>
+        {% endif %}
 
   <p>
   <a href="https://www.wikidata.org/wiki/{{ qid }}">view this painting on Wikidata</a>
