@@ -81,8 +81,9 @@ def build_browse_item_map(bindings):
         item = {
             'image_filename': image_filename,
             'date': d,
-            'artist_name': artist_name,
         }
+        if artist_name:
+            item['artist_name'] = artist_name
         if label != row_qid:
             item['label'] = label
 
@@ -104,8 +105,9 @@ def build_browse_item_map(bindings):
                 lang, title = item['title']
                 titles[lang] = title
             filenames.add(item['image_filename'])
-            if item['artist_name'] not in artist_names:
-                artist_names.append(item['artist_name'])
+            artist_name = item.get('artist_name')
+            if artist_name and artist_name not in artist_names:
+                artist_names.append(artist_name)
             if 'label' in item:
                 labels.add(item['label'])
 
@@ -115,6 +117,8 @@ def build_browse_item_map(bindings):
             'image_filename': list(filenames),
             'artist_name': ', '.join(artist_names),
         }
+        if artist_names:
+            item['artist_name'] = ', '.join(artist_names)
         if labels:
             assert len(labels) == 1
             item['label'] = list(labels)[0]
