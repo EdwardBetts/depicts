@@ -153,6 +153,29 @@ def current_url():
     args.update(request.args)
     return url_for(request.endpoint, **args)
 
+def create_depicts_item(item_id):
+    qid = f'Q{item_id}'
+    entity = mediawiki.get_entity(qid)
+    if 'en' in entity['labels']:
+        label = entity['labels']['en']['value']
+    else:
+        label = None
+
+    if 'en' in entity['descriptions']:
+        description = entity['descriptions']['en']['value']
+    else:
+        description = None
+
+    if 'en' in entity['aliases']:
+        alt_labels = {alt['value'] for alt in entity['aliases']['en']}
+    else:
+        alt_labels = set()
+
+    return DepictsItem(label=label,
+                       description=description,
+                       alt_labels=alt_labels,
+                       count=0)
+
 @app.before_request
 def init_profile():
     g.profiling = []
@@ -175,6 +198,13 @@ def save(item_id):
 
     for depicts_qid in depicts:
         depicts_id = int(depicts_qid[1:])
+
+        depicts_item = DepictsItem.query.get(depicts_id)
+        if depicts_item is None:
+            depicts_item = create_depicts_item(depicts_id)
+            database.session.add(depicts_item)
+            database.session.commit()
+
         r = create_claim(item_id, depicts_id, token)
         reply = r.json()
         if 'error' in reply:
