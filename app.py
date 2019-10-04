@@ -189,7 +189,7 @@ def user_settings():
     return 'flipped. find more is ' + display
 
 def no_existing_edit(item_id, depicts_id):
-    q = Edit.query.filter(painting_id=item_id, depicts_id=depicts_id)
+    q = Edit.query.filter_by(painting_id=item_id, depicts_id=depicts_id)
     return q.count() == 0
 
 @app.route('/save/Q<int:item_id>', methods=['POST'])
