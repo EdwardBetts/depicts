@@ -51,9 +51,11 @@
 {% endblock %}
 
 {% block script %}
+{% if not session.no_find_more %}
 <script>
   var other_props = {{ other_props | tojson }};
 </script>
 <script src="{{ url_for('static', filename='vue/vue.js') }}"></script>
 <script src="{{ url_for('static', filename='js/next.js') }}"></script>
+{% endif %}
 {% endblock %}
