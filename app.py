@@ -171,7 +171,8 @@ def create_depicts_item(item_id):
     else:
         alt_labels = set()
 
-    return DepictsItem(label=label,
+    return DepictsItem(item_id=item_id,
+                       label=label,
                        description=description,
                        alt_labels=alt_labels,
                        count=0)
