@@ -181,6 +181,13 @@ def create_depicts_item(item_id):
 def init_profile():
     g.profiling = []
 
+@app.route('/user/settings')
+def user_settings():
+    session['no_find_more'] = not session.get('no_find_more')
+    display = {True: 'on', False: 'off'}[not session['no_find_more']]
+
+    return 'flipped. find more is ' + display
+
 @app.route('/save/Q<int:item_id>', methods=['POST'])
 def save(item_id):
     depicts = request.form.getlist('depicts')

@@ -19,6 +19,9 @@
   <a href="{{ url_for('browse_page') }}">browse paintings</a>
   </p>
 
+  {% if session.no_find_more %}
+    <p>find more disabled</p>
+  {% else %}
   {% raw %}
 
   <div id="app">
@@ -37,6 +40,7 @@
 
   </div>
   {% endraw %}
+  {% endif %}
 
   </div>
 
