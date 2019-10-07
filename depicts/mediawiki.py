@@ -53,9 +53,9 @@ def get_entities_dict(ids, **params):
     }
     return api_call(params).json()['entities']
 
-def get_entity_with_cache(qid):
+def get_entity_with_cache(qid, refresh=False):
     filename = f'cache/{qid}.json'
-    if os.path.exists(filename):
+    if not refresh and os.path.exists(filename):
         entity = json.load(open(filename))
     else:
         entity = get_entity(qid)
