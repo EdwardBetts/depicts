@@ -573,7 +573,7 @@ def item_page(item_id):
                 detail = wd_catalog.lookup(property_id, value)
                 try:
                     html = get_catalog_page(property_id, value)
-                except requests.exceptions.SSLError:
+                except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
                     continue  # ignore this error
                 description = get_description_from_page(html)
                 if not description:
