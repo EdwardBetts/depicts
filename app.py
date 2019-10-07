@@ -447,11 +447,11 @@ def get_catalog_page(property_id, value):
     filename = f'cache/{property_id}_{catalog_id}.html'
 
     if os.path.exists(filename):
-        html = open(filename).read()
+        html = open(filename, 'rb').read()
     else:
         r = requests.get(url, headers={'User-Agent': user_agent}, timeout=2)
-        html = r.text
-        open(filename, 'w').write(html)
+        html = r.content
+        open(filename, 'wb').write(html)
 
     return html
 
@@ -460,13 +460,13 @@ def get_catalog_url(url):
     filename = 'cache/' + md5_filename
 
     if os.path.exists(filename):
-        html = open(filename).read()
+        html = open(filename, 'rb').read()
     else:
         r = relaxed_ssl.get(url,
                             headers={'User-Agent': user_agent},
                             timeout=2)
-        html = r.text
-        open(filename, 'w').write(html)
+        html = r.content
+        open(filename, 'wb').write(html)
 
     return html
 
