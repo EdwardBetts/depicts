@@ -283,8 +283,13 @@ def start():
 @app.route('/next')
 def random_painting():
     rows = wdqs.run_query_with_cache(painting_no_depicts_query)
-    row = random.choice(rows)
-    item_id = wdqs.row_id(row)
+    has_depicts = True
+    while has_depicts:
+        item_id = wdqs.row_id(random.choice(rows))
+        if PaintingItem.query.get(item_id):
+            continue
+        has_depicts = 'P180' in mediawiki.get_entity(f'Q{item_id}')['claims']
+
     return redirect(url_for('item_page', item_id=item_id))
 
 @app.route('/oauth/start')
