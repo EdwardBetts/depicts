@@ -498,11 +498,41 @@ def get_description_from_page(html):
 
     return twitter_description
 
+def existing_depicts_from_entity(entity):
+    if 'P180' not in entity['claims']:
+        return []
+    existing = []
+    for claim in entity['claims']['P180']:
+        item_id = claim['mainsnak']['datavalue']['value']['numeric-id']
+
+        item = DepictsItem.query.get(item_id)
+        if item:
+            d = {
+                'label': item.label,
+                'description': item.description,
+                'qid': item.qid,
+                'count': item.count,
+                'existing': True,
+            }
+        else:
+            qid = f'Q{item_id}'
+            d = {
+                'label': 'not in db',
+                'description': '',
+                'qid': qid,
+                'count': 0,
+                'existing': True,
+            }
+        existing.append(d)
+    return existing
+
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
     item = painting.Painting(qid)
-    entity = mediawiki.get_entity_with_cache(qid)
+    entity = mediawiki.get_entity_with_cache(qid, refresh=True)
+
+    existing_depicts = existing_depicts_from_entity(entity)
 
     width = 800
     image_filename = item.image_filename
@@ -600,6 +630,7 @@ def item_page(item_id):
                            label=label,
                            label_languages=label_languages,
                            show_translation_links=show_translation_links,
+                           existing_depicts=existing_depicts,
                            image=image,
                            other=other,
                            # hits=hits,

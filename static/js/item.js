@@ -8,10 +8,11 @@ var app = new Vue({
         searchTerms: '',
         hits: [],
         new_depicts: [],
+        existing_depicts: existing_depicts,
     },
     methods: {
         remove(index) {
-                this.$delete(this.new_depicts, index);
+            this.$delete(this.new_depicts, index);
         },
         add_depicts(hit) {
             this.new_depicts.push(hit);

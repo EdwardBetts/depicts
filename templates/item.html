@@ -4,7 +4,8 @@
 
 {% block style %}
 <style>
-.description { margin-left: 2em; color: rgb(96, 96, 96); }
+div.description { margin-left: 2em; color: rgb(96, 96, 96); }
+span.description { color: rgb(96, 96, 96); }
 </style>
 {% endblock %}
 
@@ -104,6 +105,20 @@
       <form method="POST" action="{{ url_for('save', item_id=item_id) }}">
       {% raw %}
       <div id="app" class="mt-2">
+        <div v-if="existing_depicts.length">
+          <div>this painting has {{ existing_depicts.length }} existing depicts statement</div>
+        </div>
+
+        <div class="mb-2" v-for="(hit, index) in existing_depicts">
+          <div>
+            <a :href="'https://www.wikidata.org/wiki/' + hit.qid">{{ hit.label }}</a>
+            ({{ hit.qid }})
+            &nbsp;
+            <span v-if="hit.description" class="description">{{ hit.description }}</span>
+            &mdash; {{ hit.count }} paintings
+          </div>
+        </div>
+
         <h3>what can you see in this painting?</h3>
 
         <div v-if="new_depicts.length">
@@ -118,7 +133,7 @@
             <a href="#" @click.prevent="remove(index)" >remove</a>
             &mdash; {{ hit.count }} existing paintings
             ({{ hit.qid }})
-            <a :href="'https://www.wikidata.org/wiki/' + hit.qid">view on Wikidata</a>
+            <a :href="'https://www.wikidata.org/wiki/' + hit.qid">[wikidata]</a>
           </div>
           <div v-if="hit.description">
             <div class="description">{{ hit.description }}</div>
@@ -162,6 +177,7 @@
 {% block script %}
 <script>
   var lookup_url = {{ url_for('depicts_lookup') | tojson }};
+  var existing_depicts = {{ existing_depicts | tojson }};
 </script>
 <script src="{{ url_for('static', filename='vue/vue.js') }}"></script>
 <script src="{{ url_for('static', filename='js/item.js') }}"></script>
