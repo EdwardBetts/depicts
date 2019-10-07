@@ -20,8 +20,10 @@
     <tbody>
     {% for edit in edit_list %}
     <tr>
-      <td><a href="https://www.wikidata.org/wiki/{{ edit.painting_qid }}">{{ edit.painting.label }}</a>
-          ({{ edit.painting_qid }})</td>
+      <td><a href="{{ url_for('item_page', item_id=edit.painting_id) }}">{{ edit.painting.label }}</a>
+        ({{ edit.painting_qid }})
+        <a href="https://www.wikidata.org/wiki/{{ edit.painting_qid }}">[wikidata]</a>
+      </td>
       <td><a href="https://www.wikidata.org/wiki/{{ edit.depicts_qid }}">{{ edit.depicts.label }}</a>
           ({{ edit.depicts_qid }})</td>
       <td>{{ edit.timestamp.strftime('%Y %b %d %H:%M') }}</td>
