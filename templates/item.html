@@ -24,16 +24,11 @@
         </p>
         {% endif %}
 
-  <p>
-  <a href="https://www.wikidata.org/wiki/{{ qid }}">view this painting on Wikidata</a>
-  |
-  <a href="{{ url_for('random_painting') }}">switch to another painting</a>
-  |
-  <a href="{{ url_for('browse_page') }}">browse paintings</a>
-  </p>
-
-
-
+  <div class="m-2">
+  <a href="https://www.wikidata.org/wiki/{{ qid }}" class="btn btn-primary">view on Wikidata</a>
+  <a href="{{ url_for('random_painting') }}" class="btn btn-primary">skip this photo</a>
+  <a href="{{ url_for('browse_page') }}" class="btn btn-primary">browse paintings</a>
+  </div>
 
 
       <div>
