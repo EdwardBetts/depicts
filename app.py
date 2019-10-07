@@ -943,6 +943,7 @@ def depicts_lookup():
     item_ids = []
     hits = []
     q1 = DepictsItem.query.filter(DepictsItem.label.ilike(terms + '%'))
+    seen = set()
     for item in q1:
         hit = {
             'label': item.label,
@@ -952,6 +953,7 @@ def depicts_lookup():
         }
         item_ids.append(item.item_id)
         hits.append(hit)
+        seen.add(item.qid)
 
     cls = DepictsItemAltLabel
     q2 = cls.query.filter(cls.alt_label.ilike(terms + '%'),
@@ -967,8 +969,30 @@ def depicts_lookup():
             'alt_label': alt.alt_label,
         }
         hits.append(hit)
+        seen.add(item.qid)
 
+    r = mediawiki.api_call({
+        'action': 'wbsearchentities',
+        'search': terms,
+        'limit': 'max',
+        'language': 'en'
+    })
     hits.sort(key=lambda hit: hit['count'], reverse=True)
+
+    for result in r.json()['search']:
+        if result['id'] in seen:
+            continue
+
+        seen.add(result['id'])
+        hit = {
+            'label': result['label'],
+            'description': result.get('description') or None,
+            'qid': result['id'],
+            'count': 0,
+        }
+        if result['match']['type'] == 'alias':
+            hit['alt_label'] = result['match']['text']
+        hits.append(hit)
 
     ret = {
         'count': q1.count() + q2.count(),
