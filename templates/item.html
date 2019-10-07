@@ -127,9 +127,9 @@
 
         <button type="submit" v-if="new_depicts.length" class="btn btn-primary">add these to painting on Wikidata</button>
 
-        <input class="form-control-lg mt-2 w-100" autofocus autocomplete="off" v-model.trim="searchTerms" @input="search" />
+        <input class="form-control-lg my-2 w-100" autofocus autocomplete="off" v-model.trim="searchTerms" @input="search" />
 
-        <div id="item-list">
+        <div v-if="hits.length" id="item-list">
           <div v-for="hit in hits">
             <div>
               <a href="#" @click.prevent="add_depicts(hit)">{{ hit.label }}</a>
@@ -141,7 +141,10 @@
             <div v-if="hit.description">
               <div class="description">{{ hit.description }}</div>
             </div>
-          </div>
+          </div> <! -- end for -->
+        </div>
+        <div v-else-if="searchTerms.length >= 3">
+          no matching depicts found
         </div>
       </div>
       {% endraw %}
