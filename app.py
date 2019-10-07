@@ -671,7 +671,7 @@ def get_other(entity):
 
 @app.route("/admin/edits")
 def list_edits():
-    edit_list = Edit.query.order_by(Edit.timestamp)
+    edit_list = Edit.query.order_by(Edit.timestamp.desc())
 
     painting_count = (database.session
                               .query(func.count(distinct(Edit.painting_id)))
@@ -689,7 +689,8 @@ def list_edits():
 
 @app.route("/user/<username>")
 def user_page(username):
-    edit_list = Edit.query.filter_by(username=username).order_by(Edit.timestamp)
+    edit_list = (Edit.query.filter_by(username=username)
+                           .order_by(Edit.timestamp.desc()))
 
     painting_count = (database.session
                               .query(func.count(distinct(Edit.painting_id)))
