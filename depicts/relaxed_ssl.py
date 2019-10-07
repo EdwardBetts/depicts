@@ -13,4 +13,4 @@ class HTTPSAdapter(HTTPAdapter):
 def get(*args, **kwargs):
     s = requests.Session()
     s.mount('https://', HTTPSAdapter())
-    return s.get(*args, **kwargs)
+    return s.get(*args, **kwargs, verify=False)
