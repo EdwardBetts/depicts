@@ -43,6 +43,16 @@ def get_entities(ids, **params):
     json_data = r.json()
     return list(json_data['entities'].values())
 
+def get_entities_dict(ids, **params):
+    if not ids:
+        return []
+    params = {
+        'action': 'wbgetentities',
+        'ids': '|'.join(ids),
+        **params,
+    }
+    return api_call(params).json()['entities']
+
 def get_entity_with_cache(qid):
     filename = f'cache/{qid}.json'
     if os.path.exists(filename):
