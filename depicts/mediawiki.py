@@ -1,6 +1,7 @@
 import requests
 import os
 import json
+import hashlib
 from .category import Category
 
 wikidata_url = 'https://www.wikidata.org/w/api.php'
@@ -64,7 +65,9 @@ def get_entity_with_cache(qid, refresh=False):
     return entity
 
 def get_entities_with_cache(ids, **params):
-    filename = f'cache/entities_{"_".join(ids)}.json'
+    md5 = hashlib.md5(' '.join(ids).encode('utf-8')).hexdigest()
+
+    filename = f'cache/entities_{md5}.json'
     if os.path.exists(filename):
         entity = json.load(open(filename))
     else:
