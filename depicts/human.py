@@ -19,8 +19,6 @@ def get_items_from_name(name):
     m = re_four_and_two.search(name)
     years = tuple(int(y) for y in re_four_digits.findall(name))
 
-    print(name)
-
     yob1, yod1 = None, None
     if m:
         century = m.group(1)
@@ -30,7 +28,6 @@ def get_items_from_name(name):
         found += query(yob1, yod1)
 
     if len(years) == 2 and years != (yob1, yod1):
-        print(years)
         found += query(*years)
 
     return found
