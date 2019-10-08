@@ -56,5 +56,5 @@ def from_name(name):
             if 'en' in entity['descriptions']:
                 i['description'] = entity['descriptions']['en']['value']
             found.append(i)
-    found.sort(key=lambda i: i['label'])
+    found.sort(key=lambda i: i.get('label', ''))
     return found
