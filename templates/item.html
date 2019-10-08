@@ -121,6 +121,16 @@ span.description { color: rgb(96, 96, 96); }
 
         <h3>what can you see in this painting?</h3>
 
+        <div v-if="people.length">
+          <div>These people were born and died in the same years as appears in the title of the painting.</div>
+          <div v-for="person in people">
+            <a href="#" @click.prevent="add_person(person)">{{ person.label || '[name missing]' }}</a>,
+            {{ person.year_of_birth }}-{{ person.year_of_death}} ({{ person.qid }})
+            <span v-if="person.description" class="description">{{ person.description }}</span>
+            <a :href="'https://www.wikidata.org/wiki/' + person.qid">[wikidata]</a>
+          </div>
+        </div>
+
         <div v-if="new_depicts.length">
           <div>{{ new_depicts.length }} new items to add to painting depicts statement</div>
         </div>
@@ -178,6 +188,7 @@ span.description { color: rgb(96, 96, 96); }
 <script>
   var lookup_url = {{ url_for('depicts_lookup') | tojson }};
   var existing_depicts = {{ existing_depicts | tojson }};
+  var people = {{ people | tojson }};
 </script>
 <script src="{{ url_for('static', filename='vue/vue.js') }}"></script>
 <script src="{{ url_for('static', filename='js/item.js') }}"></script>

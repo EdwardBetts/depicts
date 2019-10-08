@@ -63,6 +63,16 @@ def get_entity_with_cache(qid, refresh=False):
 
     return entity
 
+def get_entities_with_cache(ids, **params):
+    filename = f'cache/entities_{"_".join(ids)}.json'
+    if os.path.exists(filename):
+        entity = json.load(open(filename))
+    else:
+        entity = get_entities(ids, **params)
+        json.dump(entity, open(filename, 'w'), indent=2)
+
+    return entity
+
 def mediawiki_query(titles, params, site):
     if not titles:
         return []
@@ -132,3 +142,11 @@ def get_categories(titles, site):
             continue
         title_and_cats.append((i['title'], cats))
     return title_and_cats
+
+def get_entity_label(entity):
+    if 'en' in entity['labels']:
+        return entity['labels']['en']['value']
+
+    label_values = {l['value'] for l in entity['labels'].values()}
+    if len(label_values) == 1:
+        return list(label_values)[0]

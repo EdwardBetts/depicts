@@ -3,7 +3,7 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, relaxed_ssl)
+                     wd_catalog, relaxed_ssl, human)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -203,7 +203,7 @@ def save(item_id):
     painting_item = PaintingItem.query.get(item_id)
     if painting_item is None:
         painting_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
-        label = get_entity_label(painting_entity)
+        label = mediawiki.get_entity_label(painting_entity)
         painting_item = PaintingItem(item_id=item_id, label=label, entity=painting_entity)
         database.session.add(painting_item)
         database.session.commit()
@@ -546,6 +546,8 @@ def item_page(item_id):
         label = None
     other = get_other(item.entity)
 
+    people = human.from_name(label) if label else None
+
     if 'P276' in entity['claims']:
         location = first_datavalue(entity, 'P276')['id']
         institution = other[location]
@@ -632,17 +634,10 @@ def item_page(item_id):
                            show_translation_links=show_translation_links,
                            existing_depicts=existing_depicts,
                            image=image,
+                           people=people,
                            other=other,
                            # hits=hits,
                            title=item.display_title)
-
-def get_entity_label(entity):
-    if 'en' in entity['labels']:
-        return entity['labels']['en']['value']
-
-    label_values = {l['value'] for l in entity['labels'].values()}
-    if len(label_values) == 1:
-        return list(label_values)[0]
 
 def get_languages(codes):
     return Language.query.filter(Language.wikimedia_language_code.in_(codes))
@@ -687,7 +682,7 @@ def get_labels(keys, name=None):
         json.dump({'keys': keys, 'labels': labels},
                   open(filename, 'w'), indent=2)
 
-    return {entity['id']: get_entity_label(entity) for entity in labels}
+    return {entity['id']: mediawiki.get_entity_label(entity) for entity in labels}
 
 def get_other(entity):
     other_items = set()
@@ -744,7 +739,7 @@ def next_page(item_id):
     image_filename = first_datavalue(entity, 'P18')
     image = image_with_cache(qid, image_filename, width)
 
-    label = get_entity_label(entity)
+    label = mediawiki.get_entity_label(entity)
     other = get_other(entity)
 
     other_list = []

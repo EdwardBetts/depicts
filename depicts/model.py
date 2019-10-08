@@ -43,6 +43,17 @@ class PaintingItem(Base):
     entity = Column(postgresql.JSON)
     qid = column_property('Q' + cast(item_id, String))
 
+class HumanItem(Base):
+    __tablename__ = 'human'
+    item_id = Column(Integer, primary_key=True, autoincrement=False)
+    year_of_birth = Column(Integer, nullable=False)
+    year_of_death = Column(Integer, nullable=False)
+    age_at_death = column_property(year_of_death - year_of_birth)
+    qid = column_property('Q' + cast(item_id, String))
+
+    yob = synonym('year_of_birth')
+    yod = synonym('year_of_death')
+
 class Language(Base):
     __tablename__ = 'language'
     item_id = Column(Integer, primary_key=True, autoincrement=False)
