@@ -11,8 +11,8 @@ query_url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
 url_start = 'http://www.wikidata.org/entity/Q'
 commons_start = 'http://commons.wikimedia.org/wiki/Special:FilePath/'
 
-def row_id(row):
-    return int(utils.drop_start(row['item']['value'], url_start))
+def row_id(row, field='item'):
+    return int(utils.drop_start(row[field]['value'], url_start))
 
 def get_row_value(row, field):
     return row[field]['value'] if field in row else None
@@ -27,6 +27,8 @@ def commons_uri_to_filename(uri):
 def run_query(query):
     params = {'query': query, 'format': 'json'}
     r = requests.post(query_url, data=params, stream=True)
+    if r.status_code != 200:
+        print(r.text)
     assert r.status_code == 200
     return r
 
