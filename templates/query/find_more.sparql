@@ -1,0 +1,19 @@
+select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?timeprecision {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?item wdt:P31 wd:Q3305213 .
+  {% for pid, qid in params %}
+    ?item wdt:{{pid}} wd:{{qid}} .
+  {% endfor %}
+  ?item wdt:P18 ?image .
+  OPTIONAL {
+    ?item p:P571/psv:P571 ?timenode .
+    ?timenode wikibase:timeValue         ?time.
+    ?timenode wikibase:timePrecision     ?timeprecision.
+  }
+  OPTIONAL {
+    ?item wdt:P1476 ?title .
+    BIND(LANG(?title) as ?titleLang)
+  }
+  OPTIONAL { ?item wdt:P170 ?artist }
+  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
+}

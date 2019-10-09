@@ -61,26 +61,6 @@ find_more_props = {
     # 'P123': 'publisher', (only 1)
 }
 
-find_more_query = '''
-select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?timeprecision {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-  ?item wdt:P31 wd:Q3305213 .
-  PARAMS
-  ?item wdt:P18 ?image .
-  OPTIONAL {
-    ?item p:P571/psv:P571 ?timenode .
-    ?timenode wikibase:timeValue         ?time.
-    ?timenode wikibase:timePrecision     ?timeprecision.
-  }
-  OPTIONAL {
-    ?item wdt:P1476 ?title .
-    BIND(LANG(?title) as ?titleLang)
-  }
-  OPTIONAL { ?item wdt:P170 ?artist }
-  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
-}
-'''
-
 find_more_basic_query = '''
 select distinct ?item ?image {
   VALUES ?value { LIST }
@@ -89,18 +69,6 @@ select distinct ?item ?image {
   ?item wdt:P18 ?image .
   FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
 } limit LIMIT
-'''
-
-facet_query = '''
-select ?property ?object ?objectLabel (count(*) as ?count) {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-  ?item wdt:P31 wd:Q3305213 .
-  ?item wdt:P18 ?image .
-  PARAMS
-  values ?property { PROPERTY_LIST }
-  ?item ?property ?object .
-  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
-} group by ?property ?propertyLabel ?object ?objectLabel
 '''
 
 property_query = '''
@@ -794,14 +762,15 @@ def find_more_page(property_id, item_id):
     pid, qid = f'P{property_id}', f'Q{item_id}'
     return redirect(url_for('browse_page', **{pid: qid}))
 
-def get_facets(sparql_params, params):
+def get_facets(params):
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
 
-    property_list = ' '.join(f'wdt:{pid}' for pid in find_more_props.keys()
-                             if pid not in request.args)
+    properties = [pid for pid in find_more_props.keys()
+                  if pid not in request.args]
 
-    q = (facet_query.replace('PARAMS', sparql_params)
-                    .replace('PROPERTY_LIST', property_list))
+    q = render_template('query/facet.sparql',
+                        params=params,
+                        properties=properties)
 
     bindings = wdqs.run_query_with_cache(q, flat + '_facets')
 
@@ -834,13 +803,10 @@ def browse_page():
 
     item_labels = get_labels(qid for pid, qid in params)
 
-    sparql_params = ''.join(
-        f'?item wdt:{pid} wd:{qid} .\n' for pid, qid in params)
-
-    q = find_more_query.replace('PARAMS', sparql_params)
+    q = render_template('query/find_more.sparql', params=params)
 
     bindings = wdqs.run_query_with_cache(q, flat)
-    facets = get_facets(sparql_params, params)
+    facets = get_facets(params)
 
     page_size = 45
 
