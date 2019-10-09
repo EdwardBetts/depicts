@@ -3,7 +3,7 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, relaxed_ssl, human)
+                     wd_catalog, relaxed_ssl, human, wikibase)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -134,7 +134,7 @@ def save(item_id):
     painting_item = PaintingItem.query.get(item_id)
     if painting_item is None:
         painting_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
-        label = mediawiki.get_entity_label(painting_entity)
+        label = wikibase.get_entity_label(painting_entity)
         painting_item = PaintingItem(item_id=item_id, label=label, entity=painting_entity)
         database.session.add(painting_item)
         database.session.commit()
@@ -367,10 +367,6 @@ def image_with_cache(qid, image_filename, width):
 
     return detail[image_filename]
 
-def first_datavalue(entity, pid):
-    if pid in entity['claims']:
-        return entity['claims'][pid][0]['mainsnak']['datavalue']['value']
-
 def get_catalog_page(property_id, value):
     detail = wd_catalog.lookup(property_id, value)
     url = detail['url']
@@ -481,10 +477,10 @@ def item_page(item_id):
     people = human.from_name(label) if label else None
 
     if 'P276' in entity['claims']:
-        location = first_datavalue(entity, 'P276')['id']
+        location = wikibase.first_datavalue(entity, 'P276')['id']
         institution = other[location]
     elif 'P195' in entity['claims']:
-        collection = first_datavalue(entity, 'P195')['id']
+        collection = wikibase.first_datavalue(entity, 'P195')['id']
         institution = other[collection]
     else:
         institution = '???'
@@ -497,19 +493,19 @@ def item_page(item_id):
     catalog_ids = wd_catalog.find_catalog_id(entity)
     catalog_detail = []
     for property_id in sorted(catalog_ids):
-        value = first_datavalue(entity, property_id)
+        value = wikibase.first_datavalue(entity, property_id)
         detail = wd_catalog.lookup(property_id, value)
         catalog_detail.append(detail)
 
-    catalog_url = first_datavalue(entity, 'P973')
+    catalog_url = wikibase.first_datavalue(entity, 'P973')
 
     catalog = None
     try:
         if 'P4704' in entity['claims']:
-            saam_id = first_datavalue(entity, 'P4704')
+            saam_id = wikibase.first_datavalue(entity, 'P4704')
             catalog = saam.get_catalog(saam_id)
         elif 'P4709' in entity['claims']:
-            catalog_id = first_datavalue(entity, 'P4709')
+            catalog_id = wikibase.first_datavalue(entity, 'P4709')
             catalog = barnesfoundation.get_catalog(catalog_id)
         elif catalog_url and 'www.dia.org' in catalog_url:
             catalog = dia.get_catalog(catalog_url)
@@ -533,7 +529,7 @@ def item_page(item_id):
             for property_id in sorted(catalog_ids):
                 if property_id == 'P350':
                     continue  # RKDimages ID
-                value = first_datavalue(entity, property_id)
+                value = wikibase.first_datavalue(entity, property_id)
                 detail = wd_catalog.lookup(property_id, value)
                 try:
                     html = get_catalog_page(property_id, value)
@@ -614,7 +610,7 @@ def get_labels(keys, name=None):
         json.dump({'keys': keys, 'labels': labels},
                   open(filename, 'w'), indent=2)
 
-    return {entity['id']: mediawiki.get_entity_label(entity) for entity in labels}
+    return {entity['id']: wikibase.get_entity_label(entity) for entity in labels}
 
 def get_other(entity):
     other_items = set()
@@ -668,10 +664,10 @@ def next_page(item_id):
     entity = mediawiki.get_entity_with_cache(qid)
 
     width = 800
-    image_filename = first_datavalue(entity, 'P18')
+    image_filename = wikibase.first_datavalue(entity, 'P18')
     image = image_with_cache(qid, image_filename, width)
 
-    label = mediawiki.get_entity_label(entity)
+    label = wikibase.get_entity_label(entity)
     other = get_other(entity)
 
     other_list = []

@@ -1,5 +1,5 @@
 from .model import HumanItem
-from . import mediawiki, utils
+from . import mediawiki, utils, wikibase
 import re
 
 re_four_digits = re.compile(r'\b\d{4}\b')
@@ -47,7 +47,7 @@ def from_name(name):
                 'year_of_birth': item.year_of_birth,
                 'year_of_death': item.year_of_death,
             }
-            label = mediawiki.get_entity_label(entity)
+            label = wikibase.get_entity_label(entity)
             if label:
                 i['label'] = label
             if 'en' in entity['descriptions']:

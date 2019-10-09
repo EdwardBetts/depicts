@@ -145,11 +145,3 @@ def get_categories(titles, site):
             continue
         title_and_cats.append((i['title'], cats))
     return title_and_cats
-
-def get_entity_label(entity):
-    if 'en' in entity['labels']:
-        return entity['labels']['en']['value']
-
-    label_values = {l['value'] for l in entity['labels'].values()}
-    if len(label_values) == 1:
-        return list(label_values)[0]
