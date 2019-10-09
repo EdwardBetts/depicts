@@ -3,13 +3,12 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, relaxed_ssl, human, wikibase)
+                     wd_catalog, relaxed_ssl, human, wikibase, wikidata_oauth)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
 from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
-from urllib.parse import urlencode
 from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
@@ -126,10 +125,10 @@ def no_existing_edit(item_id, depicts_id):
 @app.route('/save/Q<int:item_id>', methods=['POST'])
 def save(item_id):
     depicts = request.form.getlist('depicts')
-    username = get_username()
+    username = wikidata_oauth.get_username()
     assert username
 
-    token = get_token()
+    token = wikidata_oauth.get_token()
 
     painting_item = PaintingItem.query.get(item_id)
     if painting_item is None:
@@ -283,42 +282,6 @@ def oauth_disconnect():
             del session[key]
     return random_painting()
 
-def get_username():
-    if 'owner_key' not in session:
-        return  # not authorized
-
-    if 'username' in session:
-        return session['username']
-
-    params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
-    reply = oauth_api_request(params)
-    if 'query' not in reply:
-        return
-    session['username'] = reply['query']['userinfo']['name']
-
-    return session['username']
-
-@app.route("/show_user")
-def show_user():
-    # Make authenticated calls to the API
-    params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
-    reply = oauth_api_request(params)['query']
-
-    return repr(reply)
-
-def oauth_api_request(params):
-    url = 'https://www.wikidata.org/w/api.php?' + urlencode(params)
-    client_key = app.config['CLIENT_KEY']
-    client_secret = app.config['CLIENT_SECRET']
-    oauth = OAuth1Session(client_key,
-                          client_secret=client_secret,
-                          resource_owner_key=session['owner_key'],
-                          resource_owner_secret=session['owner_secret'])
-    r = oauth.get(url, timeout=2)
-    reply = r.json()
-
-    return reply
-
 def create_claim(painting_id, depicts_id, token):
     painting_qid = f'Q{painting_id}'
     value = json.dumps({'entity-type': 'item',
@@ -333,29 +296,7 @@ def create_claim(painting_id, depicts_id, token):
         'format': 'json',
         'formatversion': 2,
     }
-    return oauth_api_post_request(params)
-
-def get_token():
-    params = {
-        'action': 'query',
-        'meta': 'tokens',
-        'format': 'json',
-        'formatversion': 2,
-    }
-    reply = oauth_api_request(params)
-    token = reply['query']['tokens']['csrftoken']
-
-    return token
-
-def oauth_api_post_request(params):
-    url = 'https://www.wikidata.org/w/api.php'
-    client_key = app.config['CLIENT_KEY']
-    client_secret = app.config['CLIENT_SECRET']
-    oauth = OAuth1Session(client_key,
-                          client_secret=client_secret,
-                          resource_owner_key=session['owner_key'],
-                          resource_owner_secret=session['owner_secret'])
-    return oauth.post(url, data=params, timeout=2)
+    return wikidata_oauth.api_post_request(params)
 
 def image_with_cache(qid, image_filename, width):
     filename = f'cache/{qid}_{width}_image.json'
@@ -556,7 +497,7 @@ def item_page(item_id):
                            catalog_detail=catalog_detail,
                            labels=find_more_props,
                            entity=item.entity,
-                           username=get_username(),
+                           username=wikidata_oauth.get_username(),
                            label=label,
                            label_languages=label_languages,
                            show_translation_links=show_translation_links,
@@ -757,7 +698,7 @@ def browse_page():
     if not params:
         return render_template('browse_index.html',
                                props=find_more_props,
-                               username=get_username())
+                               username=wikidata_oauth.get_username())
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
 
