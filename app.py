@@ -217,8 +217,16 @@ def random_painting():
         item_id = wdqs.row_id(random.choice(rows))
         if PaintingItem.query.get(item_id):
             continue
-        has_depicts = 'P180' in mediawiki.get_entity(f'Q{item_id}')['claims']
+        entity = mediawiki.get_entity_with_cache(f'Q{item_id}', refresh=True)
+        en_label = wikibase.get_en_label(entity)
+        if en_label and en_label.startswith('Page from '):
+            # example: Q60467422
+            # title: Page from Tales of a Parrot (Tuti-nama): text page
+            # this is not a painting
+            continue
+        has_depicts = 'P180' in entity['claims']
 
+    session[f'Q{item_id}'] = 'from redirect'
     return redirect(url_for('item_page', item_id=item_id))
 
 @app.route('/oauth/start')
@@ -338,7 +346,8 @@ def existing_depicts_from_entity(entity):
 def item_page(item_id):
     qid = f'Q{item_id}'
     item = painting.Painting(qid)
-    entity = mediawiki.get_entity_with_cache(qid, refresh=True)
+    from_redirect = qid in session and session.pop(qid) == 'from redirect'
+    entity = mediawiki.get_entity_with_cache(qid, refresh=not from_redirect)
 
     existing_depicts = existing_depicts_from_entity(entity)
 
