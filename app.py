@@ -873,13 +873,15 @@ def browse_page():
         item['url'] = url_for('item_page', item_id=item['item_id'])
         item['image'] = detail[item['image_filename']]
 
-    title = ' / '.join(item_labels[qid] for pid, qid in params)
+    title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
+                       for pid, qid in params)
 
     return render_template('find_more.html',
                            facets=facets,
                            prop_labels=find_more_props,
                            label=title,
                            pager=pager,
+                           params=params,
                            item_map=item_map,
                            page=page,
                            labels=find_more_props,
