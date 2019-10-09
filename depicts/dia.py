@@ -6,7 +6,10 @@ import re
 re_url = re.compile(r'https?://www.dia.org/art/collection/object/(.+)$')
 
 def get_html(url):
-    catalog_id = re_url.search(url).group(1).replace('/', '_')
+    m = re_url.search(url).group(1).replace('/', '_')
+    if not m:
+        return
+    catalog_id = m.group(1).replace('/', '_')
 
     filename = f'cache/dia_{catalog_id}.html'
 
@@ -47,4 +50,6 @@ def parse_html(html):
     }
 
 def get_catalog(url):
-    return parse_html(get_html(url))
+    html = get_html(url)
+    if html:
+        return parse_html(html)
