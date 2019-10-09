@@ -13,6 +13,10 @@ def get_description_from_page(html):
     if div is not None:
         return div.text
 
+    div_list = root.find_class('item-description')
+    if len(div_list):
+        return div_list[0].text_content()
+
     meta_twitter_description = root.find('.//meta[@name="twitter:description"]')
     if meta_twitter_description is None:
         return
