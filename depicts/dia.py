@@ -6,7 +6,7 @@ import re
 re_url = re.compile(r'https?://www.dia.org/art/collection/object/(.+)$')
 
 def get_html(url):
-    m = re_url.search(url).group(1).replace('/', '_')
+    m = re_url.search(url)
     if not m:
         return
     catalog_id = m.group(1).replace('/', '_')
