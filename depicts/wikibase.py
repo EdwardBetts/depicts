@@ -9,3 +9,7 @@ def get_entity_label(entity):
     label_values = {l['value'] for l in entity['labels'].values()}
     if len(label_values) == 1:
         return list(label_values)[0]
+
+def get_en_label(entity):
+    if 'en' in entity['labels']:
+        return entity['labels']['en']['value']
