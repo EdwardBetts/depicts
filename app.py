@@ -3,8 +3,7 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, relaxed_ssl, human, wikibase, wikidata_oauth,
-                     parse_catalog)
+                     wd_catalog, human, wikibase, wikidata_oauth, parse_catalog)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -14,7 +13,6 @@ from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
 from collections import defaultdict
-import hashlib
 import requests.exceptions
 import requests
 import json
@@ -308,37 +306,6 @@ def image_with_cache(qid, image_filename, width):
 
     return detail[image_filename]
 
-def get_catalog_page(property_id, value):
-    detail = wd_catalog.lookup(property_id, value)
-    url = detail['url']
-    catalog_id = value.replace('/', '_')
-
-    filename = f'cache/{property_id}_{catalog_id}.html'
-
-    if os.path.exists(filename):
-        html = open(filename, 'rb').read()
-    else:
-        r = requests.get(url, headers={'User-Agent': user_agent}, timeout=2)
-        html = r.content
-        open(filename, 'wb').write(html)
-
-    return html
-
-def get_catalog_url(url):
-    md5_filename = hashlib.md5(url.encode('utf-8')).hexdigest() + '.html'
-    filename = 'cache/' + md5_filename
-
-    if os.path.exists(filename):
-        html = open(filename, 'rb').read()
-    else:
-        r = relaxed_ssl.get(url,
-                            headers={'User-Agent': user_agent},
-                            timeout=2)
-        html = r.content
-        open(filename, 'wb').write(html)
-
-    return html
-
 def existing_depicts_from_entity(entity):
     if 'P180' not in entity['claims']:
         return []
@@ -430,7 +397,7 @@ def item_page(item_id):
             catalog = museodelprado.get_catalog(catalog_url)
 
         if not catalog and catalog_url:
-            html = get_catalog_url(catalog_url)
+            html = parse_catalog.get_catalog_url(catalog_url)
             description = parse_catalog.get_description_from_page(html)
             if description:
                 catalog = {
@@ -445,7 +412,7 @@ def item_page(item_id):
                 value = wikibase.first_datavalue(entity, property_id)
                 detail = wd_catalog.lookup(property_id, value)
                 try:
-                    html = get_catalog_page(property_id, value)
+                    html = parse_catalog.get_catalog_page(property_id, value)
                 except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
                     continue  # ignore this error
                 description = parse_catalog.get_description_from_page(html)
