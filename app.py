@@ -3,7 +3,8 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, relaxed_ssl, human, wikibase, wikidata_oauth)
+                     wd_catalog, relaxed_ssl, human, wikibase, wikidata_oauth,
+                     parse_catalog)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -16,7 +17,6 @@ from collections import defaultdict
 import hashlib
 import requests.exceptions
 import requests
-import lxml.html
 import json
 import os
 import locale
@@ -339,34 +339,6 @@ def get_catalog_url(url):
 
     return html
 
-def get_description_from_page(html):
-    root = lxml.html.fromstring(html)
-    div = root.find('.//div[@itemprop="description"]')
-    if div is not None:
-        return div.text
-
-    meta_twitter_description = root.find('.//meta[@name="twitter:description"]')
-    if meta_twitter_description is None:
-        return
-    twitter_description = meta_twitter_description.get('content')
-    if not twitter_description:
-        return
-    twitter_description = twitter_description.strip()
-
-    if not twitter_description:
-        return
-
-    for element in root.getiterator():
-        if not element.text:
-            continue
-        text = element.text.strip()
-        if not text:
-            continue
-        if text != twitter_description and text.startswith(twitter_description):
-            return text
-
-    return twitter_description
-
 def existing_depicts_from_entity(entity):
     if 'P180' not in entity['claims']:
         return []
@@ -459,7 +431,7 @@ def item_page(item_id):
 
         if not catalog and catalog_url:
             html = get_catalog_url(catalog_url)
-            description = get_description_from_page(html)
+            description = parse_catalog.get_description_from_page(html)
             if description:
                 catalog = {
                     'institution': institution,
@@ -476,7 +448,7 @@ def item_page(item_id):
                     html = get_catalog_page(property_id, value)
                 except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
                     continue  # ignore this error
-                description = get_description_from_page(html)
+                description = parse_catalog.get_description_from_page(html)
                 if not description:
                     continue
                 catalog = {
