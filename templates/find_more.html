@@ -20,6 +20,13 @@
   {% endfor %}
   #}
 
+  <p>
+    <a href="{{ url_for('browse_page') }}">browse index</a>
+    {% for pid, qid in params %}
+      | <a href="{{ url_for('property_query_page', property_id=pid[1:]) }}">browse {{ labels[pid] }} list</a>
+    {% endfor %}
+  </p>
+
   <p>{{ '{:,d}'.format(total) }} paintings found</p>
 
   <a href="#" id="toggle-filters">toggle filters</a>
