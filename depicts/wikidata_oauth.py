@@ -3,7 +3,7 @@ from requests_oauthlib import OAuth1Session
 from urllib.parse import urlencode
 
 def api_post_request(params):
-    app = current_app()
+    app = current_app
     url = 'https://www.wikidata.org/w/api.php'
     client_key = app.config['CLIENT_KEY']
     client_secret = app.config['CLIENT_SECRET']
@@ -14,7 +14,7 @@ def api_post_request(params):
     return oauth.post(url, data=params, timeout=4)
 
 def api_request(params):
-    app = current_app()
+    app = current_app
     url = 'https://www.wikidata.org/w/api.php?' + urlencode(params)
     client_key = app.config['CLIENT_KEY']
     client_secret = app.config['CLIENT_SECRET']
