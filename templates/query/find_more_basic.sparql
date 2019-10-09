@@ -1,0 +1,7 @@
+select distinct ?item ?image {
+  values ?value { {% for qid in qid_list %} wd:{{ qid }}{% endfor %} }
+  ?item wdt:P31 wd:Q3305213 .
+  ?item wdt:{{ pid }} ?value .
+  ?item wdt:P18 ?image .
+  filter not exists { ?item wdt:P180 ?depicts }
+} limit {{ limit }}

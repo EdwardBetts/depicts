@@ -1,0 +1,5 @@
+select distinct ?item where {
+  ?item wdt:P31 wd:Q3305213 .
+  ?item wdt:P18 ?image .
+  filter not exists { ?item wdt:P180 ?depicts }
+}

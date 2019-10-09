@@ -61,43 +61,6 @@ find_more_props = {
     # 'P123': 'publisher', (only 1)
 }
 
-find_more_basic_query = '''
-select distinct ?item ?image {
-  VALUES ?value { LIST }
-  ?item wdt:P31 wd:Q3305213 .
-  ?item wdt:PID ?value .
-  ?item wdt:P18 ?image .
-  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
-} limit LIMIT
-'''
-
-property_query = '''
-select ?object ?objectLabel ?objectDescription (count(*) as ?count) {
-  ?item wdt:P31 wd:Q3305213 .
-  ?item wdt:P18 ?image .
-  ?item wdt:PID ?object .
-  filter not exists { ?item wdt:P180 ?depicts }
-  optional {
-    ?object rdfs:label ?objectLabel.
-    FILTER(LANG(?objectLabel) = "en").
-  }
-  optional {
-    ?object schema:description ?objectDescription .
-    filter(lang(?objectDescription) = "en")
-  }
-
-} group by ?object ?objectLabel ?objectDescription
-order by desc(?count)
-'''
-
-painting_no_depicts_query = '''
-select distinct ?item where {
-  ?item wdt:P31 wd:Q3305213 .
-  ?item wdt:P18 ?image .
-  filter not exists { ?item wdt:P180 ?depicts }
-}
-'''
-
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     database.session.remove()
@@ -212,7 +175,7 @@ def property_query_page(property_id):
     sort = request.args.get('sort')
     sort_by_name = sort and sort.lower().strip() == 'name'
 
-    q = property_query.replace('PID', pid)
+    q = render_template('query/property.sparql', pid=pid)
     rows = wdqs.run_query_with_cache(q, name=pid)
 
     no_label_qid = [row['object']['value'].rpartition('/')[2]
@@ -250,7 +213,8 @@ def start():
 
 @app.route('/next')
 def random_painting():
-    rows = wdqs.run_query_with_cache(painting_no_depicts_query)
+    q = render_template('query/painting_no_depicts.sparql')
+    rows = wdqs.run_query_with_cache(q)
     has_depicts = True
     while has_depicts:
         item_id = wdqs.row_id(random.choice(rows))
@@ -861,12 +825,10 @@ def find_more_json():
     qid_list = request.args.getlist('qid')
     limit = 6
 
-    value_list = ' '.join(f'wd:{qid}' for qid in qid_list)
-
-    q = (find_more_basic_query
-         .replace('LIST', value_list)
-         .replace('PID', pid)
-         .replace('LIMIT', str(limit)))
+    q = render_template('query/find_more_basic.sparql',
+                        qid_list=qid_list,
+                        pid=pid,
+                        limit=limit)
 
     filenames = []
     bindings = wdqs.run_query_with_cache(q, f'{pid}={",".join(qid_list)}_{limit}')
