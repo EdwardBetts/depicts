@@ -59,8 +59,8 @@ span.description { color: rgb(96, 96, 96); }
           </div>
         {% endif %}
       {% endfor %}
-      {% if catalog_detail %}
-        {% for detail in catalog_detail %}
+      {% if catalog.detail %}
+        {% for detail in catalog.detail %}
           <div>
           <strong>{{ detail.label }}</strong>:
           <a href="{{ detail.url }}">{{ detail.value }}</a>
@@ -69,14 +69,14 @@ span.description { color: rgb(96, 96, 96); }
       {% endif %}
 
 
-      {% if catalog_url %}
+      {% if catalog.url %}
         <p>
           <strong>catalog URL</strong>:
-          <a href="{{ catalog_url }}">{{ catalog_url }}</a>
+          <a href="{{ catalog.url }}">{{ catalog.url }}</a>
         </p>
       {% endif %}
 
-      {% if catalog %}
+      {% if catalog.description or catalog.keywords %}
         <div class="mt-2">
           <h4>information from the {{ catalog.institution }} catalog</h4>
           {% if catalog.description %}

@@ -1,10 +1,8 @@
 #!/usr/bin/python3
 
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
-from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
-                     dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, human, wikibase, wikidata_oauth, parse_catalog,
-                     wikidata_edit)
+from depicts import (utils, wdqs, commons, mediawiki, painting, database,
+                     wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -14,8 +12,6 @@ from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
 from collections import defaultdict
-import requests.exceptions
-import requests
 import json
 import os
 import locale
@@ -208,7 +204,6 @@ def random_painting():
 
 @app.route('/oauth/start')
 def start_oauth():
-
     next_page = request.args.get('next')
     if next_page:
         session['after_login'] = next_page
@@ -319,6 +314,14 @@ def existing_depicts_from_entity(entity):
         existing.append(d)
     return existing
 
+def get_institution(entity, other):
+    if 'P276' in entity['claims']:
+        location = wikibase.first_datavalue(entity, 'P276')['id']
+        return other[location]
+    elif 'P195' in entity['claims']:
+        collection = wikibase.first_datavalue(entity, 'P195')['id']
+        return other[collection]
+
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
@@ -342,74 +345,14 @@ def item_page(item_id):
 
     people = human.from_name(label) if label else None
 
-    if 'P276' in entity['claims']:
-        location = wikibase.first_datavalue(entity, 'P276')['id']
-        institution = other[location]
-    elif 'P195' in entity['claims']:
-        collection = wikibase.first_datavalue(entity, 'P195')['id']
-        institution = other[collection]
-    else:
-        institution = '???'
-
     painting_item = PaintingItem.query.get(item_id)
     if painting_item is None:
         painting_item = PaintingItem(item_id=item_id, label=label, entity=entity)
         database.session.add(painting_item)
 
-    catalog_ids = wd_catalog.find_catalog_id(entity)
-    catalog_detail = []
-    for property_id in sorted(catalog_ids):
-        value = wikibase.first_datavalue(entity, property_id)
-        detail = wd_catalog.lookup(property_id, value)
-        catalog_detail.append(detail)
-
-    catalog_url = wikibase.first_datavalue(entity, 'P973')
-
-    catalog = None
-    try:
-        if 'P4704' in entity['claims']:
-            saam_id = wikibase.first_datavalue(entity, 'P4704')
-            catalog = saam.get_catalog(saam_id)
-        elif 'P4709' in entity['claims']:
-            catalog_id = wikibase.first_datavalue(entity, 'P4709')
-            catalog = barnesfoundation.get_catalog(catalog_id)
-        elif catalog_url and 'www.dia.org' in catalog_url:
-            catalog = dia.get_catalog(catalog_url)
-        elif catalog_url and 'www.rijksmuseum.nl' in catalog_url:
-            catalog = rijksmuseum.get_catalog(catalog_url)
-        elif catalog_url and 'www.npg.org.uk' in catalog_url:
-            catalog = npg.get_catalog(catalog_url)
-        elif catalog_url and 'www.museodelprado.es' in catalog_url:
-            catalog = museodelprado.get_catalog(catalog_url)
-
-        if not catalog and catalog_url:
-            html = parse_catalog.get_catalog_url(catalog_url)
-            description = parse_catalog.get_description_from_page(html)
-            if description:
-                catalog = {
-                    'institution': institution,
-                    'description': description,
-                }
-
-        if not catalog and catalog_ids:
-            for property_id in sorted(catalog_ids):
-                if property_id == 'P350':
-                    continue  # RKDimages ID
-                value = wikibase.first_datavalue(entity, property_id)
-                detail = wd_catalog.lookup(property_id, value)
-                try:
-                    html = parse_catalog.get_catalog_page(property_id, value)
-                except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
-                    continue  # ignore this error
-                description = parse_catalog.get_description_from_page(html)
-                if not description:
-                    continue
-                catalog = {
-                    'institution': detail['label'],
-                    'description': description,
-                }
-    except requests.exceptions.ReadTimeout:
-        pass
+    catalog = wd_catalog.get_catalog_from_painting(entity)
+    if not catalog.get('institution'):
+        catalog['institution'] = get_institution(entity, other)
 
     label_languages = label_and_language['languages'] if label_and_language else []
     show_translation_links = all(lang.code != 'en' for lang in label_languages)
@@ -418,8 +361,6 @@ def item_page(item_id):
                            item_id=item_id,
                            item=item,
                            catalog=catalog,
-                           catalog_url=catalog_url,
-                           catalog_detail=catalog_detail,
                            labels=find_more_props,
                            entity=item.entity,
                            username=wikidata_oauth.get_username(),

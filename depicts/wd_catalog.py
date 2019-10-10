@@ -1,3 +1,13 @@
+from depicts import (wikibase, relaxed_ssl, saam, dia, rijksmuseum, npg,
+                     museodelprado, barnesfoundation)
+import requests
+import requests.exceptions
+import lxml.html
+import os.path
+import hashlib
+
+user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0'
+
 table = {
     'P347': ('Joconde ID', 'https://www.pop.culture.gouv.fr/notice/joconde/$1'),
     'P350': ('RKDimages ID', 'https://rkd.nl/explore/images/$1'),
@@ -108,3 +118,144 @@ def lookup(property_id, value):
 
 def find_catalog_id(entity):
     return table.keys() & entity['claims'].keys()
+
+def check_catalog(entity, catalog):
+    catalog_url = catalog['url']
+    catalog_ids = catalog['ids']
+
+    if 'P4704' in entity['claims']:
+        saam_id = wikibase.first_datavalue(entity, 'P4704')
+        cat = saam.get_catalog(saam_id)
+        if cat:
+            catalog.update(cat)
+            return
+
+    if 'P4709' in entity['claims']:
+        catalog_id = wikibase.first_datavalue(entity, 'P4709')
+        cat = barnesfoundation.get_catalog(catalog_id)
+        if cat:
+            catalog.update(cat)
+            return
+
+    institutions = [
+        ('www.dia.org', dia),
+        ('www.rijksmuseum.nl', rijksmuseum),
+        ('www.npg.org.uk', npg),
+        ('www.museodelprado.es', museodelprado),
+    ]
+
+    if catalog_url:
+        for host, module in institutions:
+            if host in catalog_url:
+                cat = module.get_catalog(catalog_url)
+                if not cat:
+                    continue
+                catalog.update(cat)
+                return
+
+        html = get_catalog_url(catalog_url)
+        description = get_description_from_page(html)
+        if description:
+            catalog['description'] = description,
+            return
+
+    for property_id in sorted(catalog_ids):
+        if property_id == 'P350':
+            continue  # RKDimages ID
+        value = wikibase.first_datavalue(entity, property_id)
+        detail = lookup(property_id, value)
+        try:
+            html = get_catalog_page(property_id, value)
+        except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
+            continue  # ignore this error
+        description = get_description_from_page(html)
+        if not description:
+            continue
+        catalog = {
+            'institution': detail['label'],
+            'description': description,
+        }
+
+def get_catalog_from_painting(entity):
+    catalog_ids = find_catalog_id(entity)
+    catalog_detail = []
+    for property_id in sorted(catalog_ids):
+        value = wikibase.first_datavalue(entity, property_id)
+        detail = lookup(property_id, value)
+        catalog_detail.append(detail)
+
+    catalog = {
+        'url': wikibase.first_datavalue(entity, 'P973'),
+        'detail': catalog_detail,
+        'ids': catalog_ids,
+    }
+
+    try:
+        check_catalog(entity, catalog)
+    except requests.exceptions.ReadTimeout:
+        pass
+
+    return catalog
+
+def get_description_from_page(html):
+    root = lxml.html.fromstring(html)
+    div = root.find('.//div[@itemprop="description"]')
+    if div is not None:
+        return div.text
+
+    div_list = root.find_class('item-description')
+    if len(div_list):
+        return div_list[0].text_content()
+
+    meta_twitter_description = root.find('.//meta[@name="twitter:description"]')
+    if meta_twitter_description is None:
+        return
+    twitter_description = meta_twitter_description.get('content')
+    if not twitter_description:
+        return
+    twitter_description = twitter_description.strip()
+
+    if not twitter_description:
+        return
+
+    for element in root.getiterator():
+        if not element.text:
+            continue
+        text = element.text.strip()
+        if not text:
+            continue
+        if text != twitter_description and text.startswith(twitter_description):
+            return text
+
+    return twitter_description
+
+def get_catalog_page(property_id, value):
+    detail = lookup(property_id, value)
+    url = detail['url']
+    catalog_id = value.replace('/', '_')
+
+    filename = f'cache/{property_id}_{catalog_id}.html'
+
+    if os.path.exists(filename):
+        html = open(filename, 'rb').read()
+    else:
+        r = requests.get(url, headers={'User-Agent': user_agent}, timeout=2)
+        html = r.content
+        open(filename, 'wb').write(html)
+
+    return html
+
+def get_catalog_url(url):
+    md5_filename = hashlib.md5(url.encode('utf-8')).hexdigest() + '.html'
+    filename = 'cache/' + md5_filename
+
+    if os.path.exists(filename):
+        html = open(filename, 'rb').read()
+    else:
+        r = relaxed_ssl.get(url,
+                            headers={'User-Agent': user_agent},
+                            timeout=2)
+        html = r.content
+        open(filename, 'wb').write(html)
+
+    return html
