@@ -333,7 +333,10 @@ def item_page(item_id):
 
     width = 800
     image_filename = item.image_filename
-    image = image_with_cache(qid, image_filename, width)
+    if image_filename:
+        image = image_with_cache(qid, image_filename, width)
+    else:
+        image = None
 
     # hits = item.run_query()
     label_and_language = get_entity_label_and_language(entity)

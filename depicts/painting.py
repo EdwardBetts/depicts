@@ -100,7 +100,8 @@ class Painting:
 
     @property
     def image_filename(self):
-        return self.entity['claims']['P18'][0]['mainsnak']['datavalue']['value']
+        if 'P18' in self.entity['claims']:
+            return self.entity['claims']['P18'][0]['mainsnak']['datavalue']['value']
 
     @property
     def display_title(self):
@@ -203,7 +204,8 @@ class Painting:
         if not titles:
             return []
 
-        cat_list = mediawiki.get_categories(titles, 'commons')
+        # cat_list = mediawiki.get_categories(titles, 'commons')
+        cat_list = []
 
         for title, cats in cat_list:
             for cat in cats:
