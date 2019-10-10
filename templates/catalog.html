@@ -16,10 +16,27 @@ td { vertical-align: top; }
       </td>
       <td>
         <p>{{ item.label }}</p>
-        {# <pre>{{ item | pprint }}</pre> #}
+
+        {% for key, prop_label in labels.items() %}
+          {% set claims = item.entity['claims'][key] %}
+          {% if claims %}
+            <div>
+            <strong>{{ prop_label }}</strong>:
+            {% for claim in claims %}
+              {% if 'datavalue' in claim.mainsnak %}
+                {% set claim_qid = claim.mainsnak.datavalue.value.id %}
+                <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+              {% else %}
+                <i>no value</i>
+              {% endif %}
+            {% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
       </td>
     </tr>
     {% endfor %}
+  </table>
 </div>
 
 {% endblock %}

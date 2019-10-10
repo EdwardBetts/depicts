@@ -422,7 +422,7 @@ def get_labels(keys, name=None):
 
     return {entity['id']: wikibase.get_entity_label(entity) for entity in labels}
 
-def get_other(entity):
+def build_other_set(entity):
     other_items = set()
     for key in find_more_props.keys():
         if key not in entity['claims']:
@@ -430,7 +430,10 @@ def get_other(entity):
         for claim in entity['claims'][key]:
             if 'datavalue' in claim['mainsnak']:
                 other_items.add(claim['mainsnak']['datavalue']['value']['id'])
+    return other_items
 
+def get_other(entity):
+    other_items = build_other_set(entity)
     return get_labels(other_items)
 
 @app.route("/admin/edits")
@@ -587,14 +590,19 @@ def catalog_page():
     entities = mediawiki.get_entities_with_cache(qids)
 
     items = []
+    other_items = set()
     for entity in entities:
+        other_items.update(build_other_set(entity))
         item = {
             'label': wikibase.get_entity_label(entity),
             'qid': entity['id'],
             'item_id': int(entity['id'][1:]),
             'image_filename': wikibase.first_datavalue(entity, 'P18'),
+            'entity': entity,
         }
         items.append(item)
+
+    other = get_labels(other_items)
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
     thumbwidth = 400
@@ -605,7 +613,10 @@ def catalog_page():
         item['url'] = url_for('item_page', item_id=item['item_id'])
         item['image'] = detail[item['image_filename']]
 
-    return render_template('catalog.html', items=items)
+    return render_template('catalog.html',
+                           labels=find_more_props,
+                           items=items,
+                           other=other)
 
 def get_image_detail_with_cache(items, cache_name, thumbwidth=None):
     filenames = [cur['image_filename'] for cur in items]
