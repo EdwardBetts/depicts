@@ -293,28 +293,25 @@ def existing_depicts_from_entity(entity):
     if 'P180' not in entity['claims']:
         return []
     existing = []
+    new_depicts = False
     for claim in entity['claims']['P180']:
         item_id = claim['mainsnak']['datavalue']['value']['numeric-id']
 
         item = DepictsItem.query.get(item_id)
-        if item:
-            d = {
-                'label': item.label,
-                'description': item.description,
-                'qid': item.qid,
-                'count': item.count,
-                'existing': True,
-            }
-        else:
-            qid = f'Q{item_id}'
-            d = {
-                'label': 'not in db',
-                'description': '',
-                'qid': qid,
-                'count': 0,
-                'existing': True,
-            }
+        if not item:
+            item = wikidata_edit.create_depicts_item(item_id)
+            database.session.add(item)
+            new_depicts = True
+        d = {
+            'label': item.label,
+            'description': item.description,
+            'qid': f'Q{item.item_id}',
+            'count': item.count,
+            'existing': True,
+        }
         existing.append(d)
+    if new_depicts:
+        database.session.commit()
     return existing
 
 def get_institution(entity, other):
