@@ -180,6 +180,9 @@ def property_query_page(property_id):
 @app.route('/')
 def start():
     return random_painting()
+    username = wikidata_oauth.get_username()
+    username = None
+    return render_template('start.html', username=username)
 
 @app.route('/next')
 def random_painting():
@@ -613,10 +616,15 @@ def catalog_page():
         item['url'] = url_for('item_page', item_id=item['item_id'])
         item['image'] = detail[item['image_filename']]
 
+    item_labels = get_labels(qid for pid, qid in params)
+    title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
+                       for pid, qid in params)
+
     return render_template('catalog.html',
                            labels=find_more_props,
                            items=items,
-                           other=other)
+                           other=other,
+                           title=title)
 
 def get_image_detail_with_cache(items, cache_name, thumbwidth=None):
     filenames = [cur['image_filename'] for cur in items]

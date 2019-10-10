@@ -1,42 +1,45 @@
 {% extends "base.html" %}
 
-{% block style %}
-<style>
-td { vertical-align: top; }
-</style>
-{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="p-2">
-  <table>
-    {% for item in items %}
-    <tr>
-      <td>
-        <img src="{{ item.image.thumburl }}">
-      </td>
-      <td>
-        <p>{{ item.label }}</p>
+  <h1>{{ self.title() }}</h1>
+  {% for item in items %}
+  <div class="card mb-3">
+    <div class="row no-gutters">
+      <div class="col-md-3">
+        <img src="{{ item.image.thumburl }}" class="card-img">
+      </div>
+      <div class="col-md-9">
+        <div class="card-body">
+          <h5 class="card-title">{{ item.label }}</h5>
 
-        {% for key, prop_label in labels.items() %}
-          {% set claims = item.entity['claims'][key] %}
-          {% if claims %}
-            <div>
-            <strong>{{ prop_label }}</strong>:
-            {% for claim in claims %}
-              {% if 'datavalue' in claim.mainsnak %}
-                {% set claim_qid = claim.mainsnak.datavalue.value.id %}
-                <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
-              {% else %}
-                <i>no value</i>
-              {% endif %}
-            {% endfor %}
-            </div>
-          {% endif %}
-        {% endfor %}
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
+            <p>
+            <a href="https://www.wikidata.org/wiki/{{ item.qid }}" class="btn btn-primary">view on Wikidata</a>
+            </p>
+
+          {% for key, prop_label in labels.items() %}
+            {% set claims = item.entity['claims'][key] %}
+            {% if claims %}
+              <div>
+              <strong>{{ prop_label }}</strong>:
+              {% for claim in claims %}
+                {% if 'datavalue' in claim.mainsnak %}
+                  {% set claim_qid = claim.mainsnak.datavalue.value.id %}
+                  <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+                {% else %}
+                  <i>no value</i>
+                {% endif %}
+              {% endfor %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
 </div>
 
 {% endblock %}
