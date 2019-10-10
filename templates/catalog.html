@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block style %}
+<style>
+td { vertical-align: top; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-2">
+  <table>
+    {% for item in items %}
+    <tr>
+      <td>
+        <img src="{{ item.image.thumburl }}">
+      </td>
+      <td>
+        <p>{{ item.label }}</p>
+        {# <pre>{{ item | pprint }}</pre> #}
+      </td>
+    </tr>
+    {% endfor %}
+</div>
+
+{% endblock %}

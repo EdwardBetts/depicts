@@ -556,10 +556,72 @@ def get_facets(params):
         if values
     }
 
+def get_painting_params():
+    return [(pid, qid) for pid, qid in request.args.items()
+            if pid.startswith('P') and qid.startswith('Q')]
+
+def filter_painting(params):
+    flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
+    q = render_template('query/find_more.sparql', params=params)
+    bindings = wdqs.run_query_with_cache(q, flat)
+
+    return bindings
+
+@app.route('/catalog')
+def catalog_page():
+    params = get_painting_params()
+    bindings = filter_painting(params)
+    page = utils.get_int_arg('page') or 1
+    page_size = 45
+
+    item_ids = set()
+    for row in bindings:
+        item_id = wdqs.row_id(row)
+        item_ids.add(item_id)
+
+    qids = [f'Q{item_id}' for item_id in sorted(item_ids)]
+
+    entities = mediawiki.get_entities_with_cache(qids)
+
+    items = []
+    for entity in entities:
+        item = {
+            'label': wikibase.get_entity_label(entity),
+            'qid': entity['id'],
+            'item_id': int(entity['id'][1:]),
+            'image_filename': wikibase.first_datavalue(entity, 'P18'),
+        }
+        items.append(item)
+
+    flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
+    thumbwidth = 400
+    cache_name = f'{flat}_{page}_{page_size}_{thumbwidth}'
+    detail = get_image_detail_with_cache(items, cache_name, thumbwidth=thumbwidth)
+
+    for item in items:
+        item['url'] = url_for('item_page', item_id=item['item_id'])
+        item['image'] = detail[item['image_filename']]
+
+    return render_template('catalog.html', items=items)
+
+def get_image_detail_with_cache(items, cache_name, thumbwidth=None):
+    filenames = [cur['image_filename'] for cur in items]
+
+    if thumbwidth is None:
+        thumbwidth = app.config['THUMBWIDTH']
+
+    filename = f'cache/{cache_name}_images.json'
+    if os.path.exists(filename):
+        detail = json.load(open(filename))
+    else:
+        detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
+        json.dump(detail, open(filename, 'w'), indent=2)
+
+    return detail
+
 @app.route('/browse')
 def browse_page():
-    params = [(pid, qid) for pid, qid in request.args.items()
-              if pid.startswith('P') and qid.startswith('Q')]
+    params = get_painting_params()
 
     if not params:
         return render_template('browse_index.html',
@@ -570,9 +632,8 @@ def browse_page():
 
     item_labels = get_labels(qid for pid, qid in params)
 
-    q = render_template('query/find_more.sparql', params=params)
+    bindings = filter_painting(params)
 
-    bindings = wdqs.run_query_with_cache(q, flat)
     facets = get_facets(params)
 
     page_size = 45
@@ -591,16 +652,8 @@ def browse_page():
 
     items = pager.slice(all_items)
 
-    filenames = [cur['image_filename'] for cur in items]
-
-    thumbwidth = app.config['THUMBWIDTH']
-
-    filename = f'cache/{flat}_{page}_{page_size}_images.json'
-    if os.path.exists(filename):
-        detail = json.load(open(filename))
-    else:
-        detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
-        json.dump(detail, open(filename, 'w'), indent=2)
+    cache_name = f'{flat}_{page}_{page_size}'
+    detail = get_image_detail_with_cache(items, cache_name)
 
     for item in items:
         item['url'] = url_for('item_page', item_id=item['item_id'])
