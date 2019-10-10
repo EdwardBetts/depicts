@@ -3,7 +3,8 @@
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, painting, saam, database,
                      dia, rijksmuseum, npg, museodelprado, barnesfoundation,
-                     wd_catalog, human, wikibase, wikidata_oauth, parse_catalog)
+                     wd_catalog, human, wikibase, wikidata_oauth, parse_catalog,
+                     wikidata_edit)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
                            Language)
@@ -81,30 +82,6 @@ def current_url():
     args.update(request.args)
     return url_for(request.endpoint, **args)
 
-def create_depicts_item(item_id):
-    qid = f'Q{item_id}'
-    entity = mediawiki.get_entity(qid)
-    if 'en' in entity['labels']:
-        label = entity['labels']['en']['value']
-    else:
-        label = None
-
-    if 'en' in entity['descriptions']:
-        description = entity['descriptions']['en']['value']
-    else:
-        description = None
-
-    if 'en' in entity['aliases']:
-        alt_labels = {alt['value'] for alt in entity['aliases']['en']}
-    else:
-        alt_labels = set()
-
-    return DepictsItem(item_id=item_id,
-                       label=label,
-                       description=description,
-                       alt_labels=alt_labels,
-                       count=0)
-
 @app.before_request
 def init_profile():
     g.profiling = []
@@ -141,7 +118,7 @@ def save(item_id):
 
         depicts_item = DepictsItem.query.get(depicts_id)
         if depicts_item is None:
-            depicts_item = create_depicts_item(depicts_id)
+            depicts_item = wikidata_edit.create_depicts_item(depicts_id)
             database.session.add(depicts_item)
             database.session.commit()
 
