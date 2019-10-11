@@ -1,45 +1,49 @@
 {% extends "base.html" %}
 
+{% macro item_detail(entity) %}
+  {% for key, prop_label in labels.items() %}
+    {% set claims = entity.claims[key] %}
+    {% if claims %}
+      <div>
+      <strong>{{ prop_label }}</strong>:
+      {% for claim in claims %}
+        {% if 'datavalue' in claim.mainsnak %}
+          {% set claim_qid = claim.mainsnak.datavalue.value.id %}
+          <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
+        {% else %}
+          <i>no value</i>
+        {% endif %}
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="p-2">
-  <h1>{{ self.title() }}</h1>
-  {% for item in items %}
-  <div class="card mb-3">
-    <div class="row no-gutters">
-      <div class="col-md-3">
-        <img src="{{ item.image.thumburl }}" class="card-img">
-      </div>
-      <div class="col-md-9">
-        <div class="card-body">
-          <h5 class="card-title">{{ item.label }}</h5>
+  <div class="p-2">
+    <h1>{{ self.title() }}</h1>
+    {% for item in items %}
+    <div class="card mb-3">
+      <div class="row no-gutters">
+        <div class="col-md-3">
+          <img src="{{ item.image.thumburl }}" class="card-img">
+        </div>
+        <div class="col-md-9">
+          <div class="card-body">
+            <h5 class="card-title">{{ item.label }}</h5>
 
-            <p>
-            <a href="https://www.wikidata.org/wiki/{{ item.qid }}" class="btn btn-primary">view on Wikidata</a>
-            </p>
+              <p>
+              <a href="https://www.wikidata.org/wiki/{{ item.qid }}" class="btn btn-primary">view on Wikidata</a>
+              </p>
 
-          {% for key, prop_label in labels.items() %}
-            {% set claims = item.entity['claims'][key] %}
-            {% if claims %}
-              <div>
-              <strong>{{ prop_label }}</strong>:
-              {% for claim in claims %}
-                {% if 'datavalue' in claim.mainsnak %}
-                  {% set claim_qid = claim.mainsnak.datavalue.value.id %}
-                  <a href="https://www.wikidata.org/wiki/{{ claim_qid }}">{{ other[claim_qid] or '[ label missing ]' }}</a> ({{ claim_qid }})
-                {% else %}
-                  <i>no value</i>
-                {% endif %}
-              {% endfor %}
-              </div>
-            {% endif %}
-          {% endfor %}
+              {{ item_detail(item.entity) }}
+          </div>
         </div>
       </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
 
 {% endblock %}
