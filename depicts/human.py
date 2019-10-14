@@ -1,5 +1,5 @@
 from .model import HumanItem
-from . import mediawiki, utils, wikibase
+from . import mediawiki, wikibase
 import re
 
 re_four_digits = re.compile(r'\b\d{4}\b')
@@ -38,20 +38,19 @@ def from_name(name):
     qids = list(lookup.keys())
 
     found = []
-    for cur in utils.chunk(qids, 50):
-        for entity in mediawiki.get_entities_with_cache(cur, props='labels|descriptions'):
-            qid = entity['id']
-            item = lookup[qid]
-            i = {
-                'qid': entity['id'],
-                'year_of_birth': item.year_of_birth,
-                'year_of_death': item.year_of_death,
-            }
-            label = wikibase.get_entity_label(entity)
-            if label:
-                i['label'] = label
-            if 'en' in entity['descriptions']:
-                i['description'] = entity['descriptions']['en']['value']
-            found.append(i)
+    for entity in mediawiki.get_entities_with_cache(qids, props='labels|descriptions'):
+        qid = entity['id']
+        item = lookup[qid]
+        i = {
+            'qid': entity['id'],
+            'year_of_birth': item.year_of_birth,
+            'year_of_death': item.year_of_death,
+        }
+        label = wikibase.get_entity_label(entity)
+        if label:
+            i['label'] = label
+        if 'en' in entity['descriptions']:
+            i['description'] = entity['descriptions']['en']['value']
+        found.append(i)
     found.sort(key=lambda i: i.get('label', ''))
     return found

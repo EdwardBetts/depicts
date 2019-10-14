@@ -3,8 +3,10 @@ import os
 import json
 import hashlib
 from .category import Category
+from . import utils
 
 wikidata_url = 'https://www.wikidata.org/w/api.php'
+page_size = 50
 
 hosts = {
     'commons': 'commons.wikimedia.org',
@@ -32,19 +34,7 @@ def get_entity(qid):
     if 'missing' not in entity:
         return entity
 
-def get_entities(ids, **params):
-    if not ids:
-        return []
-    params = {
-        'action': 'wbgetentities',
-        'ids': '|'.join(ids),
-        **params,
-    }
-    r = api_call(params)
-    json_data = r.json()
-    return list(json_data['entities'].values())
-
-def get_entities_dict(ids, **params):
+def wbgetentities(ids, **params):
     if not ids:
         return []
     params = {
@@ -53,6 +43,18 @@ def get_entities_dict(ids, **params):
         **params,
     }
     return api_call(params).json()['entities']
+
+def get_entities(ids, **params):
+    entity_list = []
+    for cur in utils.chunk(ids, page_size):
+        entity_list += wbgetentities(cur, **params).values()
+    return entity_list
+
+def get_entities_dict(ids, **params):
+    entities = {}
+    for cur in utils.chunk(ids, page_size):
+        entities.update(wbgetentities(cur, **params))
+    return entities
 
 def get_entity_with_cache(qid, refresh=False):
     filename = f'cache/{qid}.json'
@@ -69,20 +71,35 @@ def get_entities_with_cache(ids, **params):
 
     filename = f'cache/entities_{md5}.json'
     if os.path.exists(filename):
-        entity = json.load(open(filename))
+        entity_list = json.load(open(filename))
     else:
-        entity = get_entities(ids, **params)
-        json.dump(entity, open(filename, 'w'), indent=2)
+        entity_list = get_entities(ids, **params)
+        json.dump(entity_list, open(filename, 'w'), indent=2)
 
-    return entity
+    return entity_list
+
+def get_entities_dict_with_cache(all_ids, **params):
+    entities = {}
+    for ids in utils.chunk(all_ids, page_size):
+        md5 = hashlib.md5(' '.join(ids).encode('utf-8')).hexdigest()
+
+        filename = f'cache/entities_dict_{md5}.json'
+        if os.path.exists(filename):
+            entities.update(json.load(open(filename)))
+            continue
+        cur = wbgetentities(ids, **params)
+        json.dump(cur, open(filename, 'w'), indent=2)
+        entities.update(cur)
+    return entities
 
 def mediawiki_query(titles, params, site):
     if not titles:
         return []
 
     # avoid error: Too many values supplied for parameter "titles". The limit is 50.
-    if len(titles) > 50:
-        titles = titles[:50]
+    # FIXME: switch to utils.chunk
+    if len(titles) > page_size:
+        titles = titles[:page_size]
     base = {
         'format': 'json',
         'formatversion': 2,
