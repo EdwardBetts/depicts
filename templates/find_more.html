@@ -29,7 +29,10 @@
 
   <p>{{ '{:,d}'.format(total) }} paintings found</p>
 
-  <a href="#" id="toggle-filters">toggle filters</a>
+<p class="mb-3">
+  <a href="#" id="toggle-filters" class="btn btn-primary">toggle filters</a>
+  <a href="{{ catalog_url }}" class="btn btn-primary">catalog artwork</a>
+</p>
 
   <div id="filters">
   {% for key, values in facets.items() %}
