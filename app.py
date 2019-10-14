@@ -726,6 +726,57 @@ def find_more_json():
 
     return jsonify(items=items, q=q)
 
+def wikibase_search(terms):
+    hits = []
+    r = mediawiki.api_call({
+        'action': 'wbsearchentities',
+        'search': terms,
+        'limit': 'max',
+        'language': 'en'
+    })
+    for result in r.json()['search']:
+        hit = {
+            'label': result['label'],
+            'description': result.get('description') or None,
+            'qid': result['id'],
+            'count': 0,
+        }
+        if result['match']['type'] == 'alias':
+            hit['alt_label'] = result['match']['text']
+        hits.append(hit)
+
+    return hits
+
+def add_images_to_depicts_lookup(hits):
+    qid_to_item = {hit['qid']: hit for hit in hits}
+    all_qids = [hit['qid'] for hit in hits]
+    entities = mediawiki.get_entities_with_cache(all_qids)
+
+    for entity in entities:
+        qid = entity['id']
+        item = qid_to_item[qid]
+        item.entity = entity
+    database.session.commit()
+
+    for hit in hits:
+        item = qid_to_item[hit['qid']]
+        if item.entity:
+            image_filename = wikibase.first_datavalue(item.entity, 'P18')
+            hit['image_filename'] = image_filename
+
+    filenames = [hit['image_filename']
+                 for hit in hits
+                 if hit.get('image_filename')]
+    filenames = filenames[:50]
+    thumbwidth = 200
+    detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
+
+    for hit in hits:
+        filename = hit.get('image_filename')
+        if not filename or filename not in detail:
+            continue
+        hit['image'] = detail[filename]
+
 @app.route('/lookup')
 def depicts_lookup():
     terms = request.args.get('terms')
@@ -771,28 +822,14 @@ def depicts_lookup():
         hits.append(hit)
         seen.add(item.qid)
 
-    r = mediawiki.api_call({
-        'action': 'wbsearchentities',
-        'search': terms,
-        'limit': 'max',
-        'language': 'en'
-    })
     hits.sort(key=lambda hit: hit['count'], reverse=True)
 
-    for result in r.json()['search']:
-        if result['id'] in seen:
-            continue
+    if app.config.get('LOOKUP_INCLUDES_IMAGES'):
+        add_images_to_depicts_lookup(hits)
 
-        seen.add(result['id'])
-        hit = {
-            'label': result['label'],
-            'description': result.get('description') or None,
-            'qid': result['id'],
-            'count': 0,
-        }
-        if result['match']['type'] == 'alias':
-            hit['alt_label'] = result['match']['text']
-        hits.append(hit)
+    if app.config.get('SEARCH_WIKIDATA'):
+        search_hits = wikibase_search(terms)
+        hits += [hit for hit in search_hits if hit['qid'] not in seen]
 
     ret = {
         'count': q1.count() + q2.count(),
