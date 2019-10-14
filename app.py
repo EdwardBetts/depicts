@@ -681,6 +681,8 @@ def browse_page():
     title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
                        for pid, qid in params)
 
+    catalog_url = url_for('catalog_page', **dict(params))
+
     return render_template('find_more.html',
                            facets=facets,
                            prop_labels=find_more_props,
@@ -688,6 +690,7 @@ def browse_page():
                            pager=pager,
                            params=params,
                            item_map=item_map,
+                           catalog_url=catalog_url,
                            page=page,
                            labels=find_more_props,
                            bindings=bindings,
