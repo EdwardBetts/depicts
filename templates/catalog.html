@@ -21,8 +21,34 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block style %}
+<style>
+.autocomplete {
+  /*the container must be positioned relative:*/
+  position: relative;
+  display: inline-block;
+}
+
+.autocomplete-items {
+  position: absolute;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+.autocomplete-items div {
+  cursor: pointer;
+  background-color: #fff;
+}
+
+
+
+</style>
+{% endblock %}
+
 {% block content %}
-  <div class="p-2">
+  <div class="p-2" id="app">
     <h1>{{ self.title() }}</h1>
     {% for item in items %}
     <div class="card mb-3">
@@ -39,6 +65,25 @@
               </p>
 
               {{ item_detail(item.entity) }}
+
+              <div class="autocomplete w-100">
+                <input class="form-control-lg my-2 search" data-qid="{{item.qid}}" autocomplete="off" @input="search" v-model.trim="searchTerms['{{ item.qid}}']" />
+
+                <div v-if="hits.{{item.qid}} && hits.{{item.qid}}.length" id="item-list" class="autocomplete-items">
+                  <div v-for="hit in hits.{{item.qid}}">
+                    <div>
+                      <a href="#">${ hit.label }</a>
+                      <span v-if="hit.alt_label">(${ hit.alt_label })</span>
+                      &mdash; ${ hit.count } existing paintings
+                      (${ hit.qid })
+                      <a :href="'https://www.wikidata.org/wiki/' + hit.qid">view on Wikidata</a>
+                    </div>
+                    <div v-if="hit.description">
+                      <div class="description">${ hit.description }</div>
+                    </div>
+                  </div> <! -- end for -->
+                </div>
+              </div>
           </div>
         </div>
       </div>
@@ -46,4 +91,12 @@
     {% endfor %}
   </div>
 
+{% endblock %}
+
+{% block script %}
+<script>
+  var lookup_url = {{ url_for('depicts_lookup') | tojson }};
+</script>
+<script src="{{ url_for('static', filename='vue/vue.js') }}"></script>
+<script src="{{ url_for('static', filename='js/catalog.js') }}"></script>
 {% endblock %}
