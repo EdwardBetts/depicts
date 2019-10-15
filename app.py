@@ -647,6 +647,11 @@ def get_image_detail_with_cache(items, cache_name, thumbwidth=None):
 def browse_index():
     return render_template('browse_index.html', props=find_more_props)
 
+@app.route('/debug/show_user')
+def debug_show_user():
+    userinfo = wikidata_oauth.userinfo_call()
+    return '<pre>' + json.dump(userinfo, indent=2) + '</pre>'
+
 @app.route('/browse')
 def browse_page():
     params = get_painting_params()

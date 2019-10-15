@@ -13,7 +13,7 @@ def api_post_request(params):
                           resource_owner_secret=session['owner_secret'])
     return oauth.post(url, data=params, timeout=4)
 
-def api_request(params):
+def raw_request(params):
     app = current_app
     url = 'https://www.wikidata.org/w/api.php?' + urlencode(params)
     client_key = app.config['CLIENT_KEY']
@@ -22,10 +22,10 @@ def api_request(params):
                           client_secret=client_secret,
                           resource_owner_key=session['owner_key'],
                           resource_owner_secret=session['owner_secret'])
-    r = oauth.get(url, timeout=4)
-    reply = r.json()
+    return oauth.get(url, timeout=4)
 
-    return reply
+def api_request(params):
+    return raw_request(params).json()
 
 def get_token():
     params = {
@@ -39,6 +39,10 @@ def get_token():
 
     return token
 
+def userinfo_call():
+    params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
+    return api_request(params)
+
 def get_username():
     if 'owner_key' not in session:
         return  # not authorized
@@ -46,8 +50,7 @@ def get_username():
     if 'username' in session:
         return session['username']
 
-    params = {'action': 'query', 'meta': 'userinfo', 'format': 'json'}
-    reply = api_request(params)
+    reply = userinfo_call()
     if 'query' not in reply:
         return
     session['username'] = reply['query']['userinfo']['name']
