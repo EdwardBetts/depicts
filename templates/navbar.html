@@ -1,0 +1,44 @@
+{% macro nav_item(name, label) %}
+<li class="nav-item{% if name == active %} active{% endif %}">
+  <a class="nav-link" href="{{ url_for(name) }}">{{ label }}{% if name == active %} <span class="sr-only">(current)</span>{% endif %}</a>
+</li>
+{% endmacro %}
+
+{% macro navbar_inner(name) %}
+  <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <a class="navbar-brand" href="{{ url_for('browse_page') }}">Wikidata Art Depiction Explorer</a>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+    <ul class="navbar-nav mr-auto">
+      {{ nav_item('browse_page', 'Browse') }}
+      {{ nav_item('list_edits', 'Recent changes') }}
+      {{ nav_item('random_painting', 'Random painting') }}
+    </ul>
+    </ul>
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        {% if g.user %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('user_page', username=g.user) }}">{{ g.user }}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('oauth_disconnect', next=request.script_root + request.full_path) }}">switch user</a>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            {% set login_url = url_for('start_oauth', next=request.script_root + request.full_path) %}
+            <a class="nav-link" href="{{ login_url }}">connect with Wikidata</a>
+          </li>
+        {% endif %}
+    </ul>
+  </div>
+{% endmacro %}
+
+{% macro navbar() %}
+<nav class="navbar navbar-toggleable-md navbar-expand-lg navbar-dark bg-dark">
+  {{ navbar_inner() }}
+</nav>
+{% endmacro %}

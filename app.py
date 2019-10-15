@@ -82,7 +82,11 @@ def current_url():
 def init_profile():
     g.profiling = []
 
-@app.route('/user/settings')
+@app.before_request
+def global_user():
+    g.user = wikidata_oauth.get_username()
+
+@app.route('/settings')
 def user_settings():
     session['no_find_more'] = not session.get('no_find_more')
     display = {True: 'on', False: 'off'}[not session['no_find_more']]
@@ -261,7 +265,7 @@ def oauth_disconnect():
     for key in 'owner_key', 'owner_secret', 'username', 'after_login':
         if key in session:
             del session[key]
-    return random_painting()
+    return redirect(url_for('browse_page'))
 
 def create_claim(painting_id, depicts_id, token):
     painting_qid = f'Q{painting_id}'
@@ -438,7 +442,7 @@ def get_other(entity):
     other_items = build_other_set(entity)
     return get_labels(other_items)
 
-@app.route("/admin/edits")
+@app.route("/edits")
 def list_edits():
     edit_list = Edit.query.order_by(Edit.timestamp.desc())
 
@@ -640,14 +644,15 @@ def get_image_detail_with_cache(items, cache_name, thumbwidth=None):
 
     return detail
 
+def browse_index():
+    return render_template('browse_index.html', props=find_more_props)
+
 @app.route('/browse')
 def browse_page():
     params = get_painting_params()
 
     if not params:
-        return render_template('browse_index.html',
-                               props=find_more_props,
-                               username=wikidata_oauth.get_username())
+        return browse_index()
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
 

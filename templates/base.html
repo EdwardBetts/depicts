@@ -11,8 +11,10 @@
 
   {% block style %}{% endblock %}
 </head>
+{% from "navbar.html" import navbar with context %}
 
 <body>
+  {% block nav %}{{ navbar() }}{% endblock %}
   {% block content %}{% endblock %}
 
   <script src="{{ url_for('static', filename='javascript/jquery/jquery.min.js') }}"></script>

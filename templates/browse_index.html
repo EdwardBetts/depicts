@@ -6,16 +6,12 @@
 <div class="m-3">
   <p><a href="{{ url_for('random_painting') }}">random painting</a>
 
-  {% if not username %}
+  {% if not g.user %}
   | <a href="{{ url_for('start_oauth') }}">connect to Wikidata account</a>
   {% endif %}
   </p>
 
-  {% if username %}
-  <p>username: {{ username }}</p>
-  {% endif %}
-
-  {% if not username %}
+  {% if not g.user %}
     <p>This tool must be connected with Wikidata to work.</p>
     <p><a href="{{ url_for('start_oauth') }}" class="btn btn-primary btn-lg">Connect with Wikidata</a>
   {% endif %}
