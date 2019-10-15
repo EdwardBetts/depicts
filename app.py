@@ -650,7 +650,7 @@ def browse_index():
 @app.route('/debug/show_user')
 def debug_show_user():
     userinfo = wikidata_oauth.userinfo_call()
-    return '<pre>' + json.dump(userinfo, indent=2) + '</pre>'
+    return '<pre>' + json.dumps(userinfo, indent=2) + '</pre>'
 
 @app.route('/browse')
 def browse_page():
