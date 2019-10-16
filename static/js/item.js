@@ -24,8 +24,7 @@ var app = new Vue({
             this.new_depicts.push(hit);
             this.hits = [];
             this.searchTerms = '';
-            var search_field = document.getElementById('search-field');
-            search_field.focus();
+            this.$refs.search.focus();
         },
         run_search() {
             var terms = this.searchTerms;
