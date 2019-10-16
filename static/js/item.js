@@ -11,6 +11,9 @@ var app = new Vue({
         people: people,
         existing_depicts: existing_depicts,
     },
+    mounted() {
+        this.focus_search();
+    },
     methods: {
         remove(index) {
             this.$delete(this.new_depicts, index);
@@ -20,11 +23,14 @@ var app = new Vue({
             hit['count'] = 0;
             this.new_depicts.push(hit);
         },
+        focus_search() {
+            this.$refs.search.focus();
+        },
         add_depicts(hit) {
             this.new_depicts.push(hit);
             this.hits = [];
             this.searchTerms = '';
-            this.$refs.search.focus();
+            setTimeout(this.focus_search, 500);
         },
         run_search() {
             var terms = this.searchTerms;
