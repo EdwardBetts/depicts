@@ -192,7 +192,9 @@ def get_catalog_from_painting(entity):
 
     try:
         check_catalog(entity, catalog)
-    except requests.exceptions.ReadTimeout:
+    except (requests.exceptions.ReadTimeout,
+            requests.exceptions.ConnectTimeout,
+            requests.exceptions.ConnectionError):
         pass
 
     return catalog
