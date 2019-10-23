@@ -93,9 +93,9 @@ def user_settings():
 
     return 'flipped. find more is ' + display
 
-def no_existing_edit(item_id, depicts_id):
+def existing_edit(item_id, depicts_id):
     q = Edit.query.filter_by(painting_id=item_id, depicts_id=depicts_id)
-    return q.count() == 0
+    return q.count() != 0
 
 @app.route('/save/Q<int:item_id>', methods=['POST'])
 def save(item_id):
@@ -122,10 +122,11 @@ def save(item_id):
             database.session.add(depicts_item)
             database.session.commit()
 
-        assert no_existing_edit(item_id, depicts_id)
-
     for depicts_qid in depicts:
         depicts_id = int(depicts_qid[1:])
+        if existing_edit(item_id, depicts_id):
+            continue
+
         r = create_claim(item_id, depicts_id, token)
         reply = r.json()
         if 'error' in reply:
