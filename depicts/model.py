@@ -26,6 +26,7 @@ class DepictsItem(Base):
     description = Column(String)
     commons = Column(String)
     count = Column(Integer)
+    entity = Column(postgresql.JSON)
     qid = column_property('Q' + cast(item_id, String))
     db_alt_labels = relationship('DepictsItemAltLabel',
                                  collection_class=set,
