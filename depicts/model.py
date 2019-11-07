@@ -1,7 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
 from .database import session, now_utc
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.types import Integer, String, DateTime
+from sqlalchemy.types import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import column_property, relationship, synonym
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import cast
@@ -10,6 +10,14 @@ from urllib.parse import quote
 
 Base = declarative_base()
 Base.query = session.query_property()
+
+class User(Base):
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True, autoincrement=False)
+    username = Column(String, unique=True)
+    options = Column(postgresql.JSON)
+    first_seen = Column(DateTime, default=now_utc())
+    is_admin = Column(Boolean, default=False)
 
 class DepictsItem(Base):
     __tablename__ = 'depicts'
