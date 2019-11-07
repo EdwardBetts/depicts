@@ -373,7 +373,7 @@ def item_page(item_id):
                            catalog=catalog,
                            labels=find_more_props,
                            entity=item.entity,
-                           username=wikidata_oauth.get_username(),
+                           username=g.user,
                            label=label,
                            label_languages=label_languages,
                            show_translation_links=show_translation_links,
