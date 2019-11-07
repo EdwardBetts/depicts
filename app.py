@@ -855,6 +855,26 @@ def depicts_lookup():
 
     return jsonify(ret)
 
+@app.route('/report/missing_image')
+def missing_image_report():
+    limit = utils.get_int_arg('limit') or 1000
+    q = DepictsItem.query.order_by(DepictsItem.count.desc()).limit(limit)
+
+    qids = [item.qid for item in q]
+    entities = mediawiki.get_entities_dict_with_cache(qids)
+
+    item_list = []
+
+    for depicts in q:
+        entity = entities[depicts.qid]
+        if any(wikibase.first_datavalue(entity, prop) for prop in ('P18', 'P2716')):
+            continue
+        item_list.append(depicts)
+
+        # TODO: call wikidata search to find images that depict item
+
+    return render_template('missing_image.html', item_list=item_list)
+
 
 if __name__ == "__main__":
     app.debug = True

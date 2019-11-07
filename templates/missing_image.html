@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}items used as depicts with no image{% endblock %}
+
+{% block content %}
+<div class="p-2">
+  <ul>
+  {% for item in item_list %}
+    <li>
+    {{ item.count }}
+    <a href="https://www.wikidata.org/wiki/{{ item.qid }}">{{ item.label }}</a>
+    ({{ item.qid }})
+    &mdash;
+    <a href="https://www.wikidata.org/w/index.php?sort=relevance&search=haswbstatement%3AP180%3D{{ item.qid }}&title=Special%3ASearch">[depicts search]</a>
+    <a href="https://query.wikidata.org/#%23defaultView%3AImageGrid%0Aselect%20distinct%20%3Fitem%20%3FitemLabel%20%3Fimage%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22%5BAUTO_LANGUAGE%5D%2Cen%22.%20%7D%0A%20%20%3Fitem%20wdt%3AP180%20wd%3A{{ item.qid }}%20.%0A%20%20%3Fitem%20wdt%3AP18%20%3Fimage%20.%0A%20%20%3Farticle%20schema%3Aabout%20%3Fitem%20.%0A%20%20%3Farticle%20schema%3AinLanguage%20%22en%22%20.%0A%20%20FILTER%20%28SUBSTR%28str%28%3Farticle%29%2C%201%2C%2025%29%20%3D%20%22https%3A%2F%2Fen.wikipedia.org%2F%22%29%0A%7D">[depicts with English article]</a>
+    <a href="https://query.wikidata.org/#%23defaultView%3AImageGrid%0Aselect%20distinct%20%3Fitem%20%3FitemLabel%20%3Fimage%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22%5BAUTO_LANGUAGE%5D%2Cen%22.%20%7D%0A%20%20%3Fitem%20wdt%3AP180%20wd%3A{{ item.qid }}%20.%0A%20%20%3Fitem%20wdt%3AP18%20%3Fimage%20.%7D">[items used as depicts]</a>
+    {% if item.description %}
+      &mdash; {{ item.description }}
+    {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+</div>
+
+{% endblock %}
