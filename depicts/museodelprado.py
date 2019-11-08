@@ -24,7 +24,7 @@ def parse_html(html):
 
     keywords = []
     for h2 in root.findall('.//h2'):
-        if h2.text.strip() != 'Displayed objects':
+        if not h2.text or h2.text.strip() != 'Displayed objects':
             continue
         div = h2.getparent()
         for keyword_span in div.findall('.//span[@property]'):
