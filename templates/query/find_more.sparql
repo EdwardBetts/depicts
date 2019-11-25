@@ -1,6 +1,16 @@
-select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?timeprecision {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-  VALUES ?isa { {% for isa in isa_list %} wd:{{ isa }} {% endfor %} }
+select ?item
+       ?itemLabel
+       ?image
+       ?artist
+       ?artistLabel
+       ?title
+       ?titleLang
+       ?time
+       ?timeprecision
+       (group_concat(distinct ?depictsLabel; SEPARATOR="|") as ?depictsList)
+where {
+  service wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  values ?isa { {% for isa in isa_list %} wd:{{ isa }} {% endfor %} }
 
   ?item wdt:P31 ?isa .
   {% for pid, qid in params %}
@@ -17,4 +27,10 @@ select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?tim
     BIND(LANG(?title) as ?titleLang)
   }
   OPTIONAL { ?item wdt:P170 ?artist }
-}
+  OPTIONAL {
+    ?item wdt:P180 ?depicts .
+    ?depicts rdfs:label ?depictsLabel .
+    FILTER(LANG(?depictsLabel) = "en").
+  }
+} group by ?item ?itemLabel ?image ?artist ?artistLabel
+           ?title ?titleLang ?time ?timeprecision

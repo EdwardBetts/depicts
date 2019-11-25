@@ -56,6 +56,11 @@
       <h5 class="card-title">{{ item.label }}</h5>
       <p class="card-text">by {{ item.artist_name }}
       {% if item.date %}({{ item.date }}){% endif %}
+        <div>
+        {% for depicts_label in item.depicts %}
+          <span class="badge badge-primary">{{ depicts_label }}</span>
+        {% endfor %}
+        </div>
       </p>
     </div>
   </div>

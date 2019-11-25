@@ -83,6 +83,7 @@ def build_browse_item_map(bindings):
         item = {
             'image_filename': image_filename,
             'date': d,
+            'depicts': row['depictsList']['value'].split('|'),
         }
         if artist_name:
             item['artist_name'] = artist_name
@@ -103,6 +104,7 @@ def build_browse_item_map(bindings):
         artist_names = []
         labels = set()
         when = None
+        depicts = []
         for item in items:
             if 'title' in item:
                 lang, title = item['title']
@@ -115,6 +117,9 @@ def build_browse_item_map(bindings):
                 labels.add(item['label'])
             if when is None and item.get('date'):
                 when = item['date']
+            for d in item['depicts']:
+                if d not in depicts:
+                    depicts.append(d)
 
         item = {
             'qid': f'Q{item_id}',
@@ -122,6 +127,7 @@ def build_browse_item_map(bindings):
             'image_filename': list(filenames),
             'artist_name': ', '.join(artist_names),
             'date': when,
+            'depicts': depicts,
         }
         if artist_names:
             item['artist_name'] = ', '.join(artist_names)
