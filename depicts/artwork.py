@@ -78,7 +78,7 @@ class QueryResultRow:
                 for k, v in self.row.items()
                 if not k.startswith('item')]
 
-class Painting:
+class Artwork:
     def __init__(self, qid):
         self.entity = mediawiki.get_entity_with_cache(qid)
         self.item_id = int(qid[1:])

@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
-from depicts import (utils, wdqs, commons, mediawiki, painting, database,
+from depicts import (utils, wdqs, commons, mediawiki, artwork, database,
                      wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit)
 from depicts.pager import Pagination, init_pager
-from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, PaintingItem,
+from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, ArtworkItem,
                            Language)
 from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
@@ -94,7 +94,7 @@ def user_settings():
     return 'flipped. find more is ' + display
 
 def existing_edit(item_id, depicts_id):
-    q = Edit.query.filter_by(painting_id=item_id, depicts_id=depicts_id)
+    q = Edit.query.filter_by(artwork_id=item_id, depicts_id=depicts_id)
     return q.count() != 0
 
 @app.route('/save/Q<int:item_id>', methods=['POST'])
@@ -105,12 +105,12 @@ def save(item_id):
 
     token = wikidata_oauth.get_token()
 
-    painting_item = PaintingItem.query.get(item_id)
-    if painting_item is None:
-        painting_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
-        label = wikibase.get_entity_label(painting_entity)
-        painting_item = PaintingItem(item_id=item_id, label=label, entity=painting_entity)
-        database.session.add(painting_item)
+    artwork_item = ArtworkItem.query.get(item_id)
+    if artwork_item is None:
+        artwork_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
+        label = wikibase.get_entity_label(artwork_entity)
+        artwork_item = ArtworkItem(item_id=item_id, label=label, entity=artwork_entity)
+        database.session.add(artwork_item)
         database.session.commit()
 
     for depicts_qid in depicts:
@@ -136,7 +136,7 @@ def save(item_id):
         lastrevid = saved['pageinfo']['lastrevid']
         assert saved['success'] == 1
         edit = Edit(username=username,
-                    painting_id=item_id,
+                    artwork_id=item_id,
                     depicts_id=depicts_id,
                     lastrevid=lastrevid)
         database.session.add(edit)
@@ -184,19 +184,19 @@ def property_query_page(property_id):
 
 @app.route('/')
 def start():
-    return random_painting()
+    return random_artwork()
     username = wikidata_oauth.get_username()
     username = None
     return render_template('start.html', username=username)
 
 @app.route('/next')
-def random_painting():
-    q = render_template('query/painting_no_depicts.sparql')
+def random_artwork():
+    q = render_template('query/artwork_no_depicts.sparql')
     rows = wdqs.run_query_with_cache(q)
     has_depicts = True
     while has_depicts:
         item_id = wdqs.row_id(random.choice(rows))
-        if PaintingItem.query.get(item_id):
+        if ArtworkItem.query.get(item_id):
             continue
         entity = mediawiki.get_entity_with_cache(f'Q{item_id}', refresh=True)
         en_label = wikibase.get_en_label(entity)
@@ -259,7 +259,7 @@ def oauth_callback():
     session['owner_secret'] = oauth_tokens.get('oauth_token_secret')
 
     next_page = session.get('after_login')
-    return redirect(next_page) if next_page else random_painting()
+    return redirect(next_page) if next_page else random_artwork()
 
 @app.route('/oauth/disconnect')
 def oauth_disconnect():
@@ -268,13 +268,13 @@ def oauth_disconnect():
             del session[key]
     return redirect(url_for('browse_page'))
 
-def create_claim(painting_id, depicts_id, token):
-    painting_qid = f'Q{painting_id}'
+def create_claim(artwork_id, depicts_id, token):
+    artwork_qid = f'Q{artwork_id}'
     value = json.dumps({'entity-type': 'item',
                         'numeric-id': depicts_id})
     params = {
         'action': 'wbcreateclaim',
-        'entity': painting_qid,
+        'entity': artwork_qid,
         'property': 'P180',
         'snaktype': 'value',
         'value': value,
@@ -332,7 +332,7 @@ def get_institution(entity, other):
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
-    item = painting.Painting(qid)
+    item = artwork.Artwork(qid)
     from_redirect = qid in session and session.pop(qid) == 'from redirect'
     entity = mediawiki.get_entity_with_cache(qid, refresh=not from_redirect)
 
@@ -355,12 +355,12 @@ def item_page(item_id):
 
     people = human.from_name(label) if label else None
 
-    painting_item = PaintingItem.query.get(item_id)
-    if painting_item is None:
-        painting_item = PaintingItem(item_id=item_id, label=label, entity=entity)
-        database.session.add(painting_item)
+    artwork_item = ArtworkItem.query.get(item_id)
+    if artwork_item is None:
+        artwork_item = ArtworkItem(item_id=item_id, label=label, entity=entity)
+        database.session.add(artwork_item)
 
-    catalog = wd_catalog.get_catalog_from_painting(entity)
+    catalog = wd_catalog.get_catalog_from_artwork(entity)
     if not catalog.get('institution'):
         catalog['institution'] = get_institution(entity, other)
 
@@ -447,9 +447,9 @@ def get_other(entity):
 def list_edits():
     edit_list = Edit.query.order_by(Edit.timestamp.desc())
 
-    painting_count = (database.session
-                              .query(func.count(distinct(Edit.painting_id)))
-                              .scalar())
+    item_count = (database.session
+                          .query(func.count(distinct(Edit.artwork_id)))
+                          .scalar())
 
     user_count = (database.session
                           .query(func.count(distinct(Edit.username)))
@@ -458,7 +458,7 @@ def list_edits():
     return render_template('list_edits.html',
                            edits=Edit.query,
                            edit_list=edit_list,
-                           painting_count=painting_count,
+                           item_count=item_count,
                            user_count=user_count)
 
 @app.route("/user/<username>")
@@ -466,16 +466,16 @@ def user_page(username):
     edit_list = (Edit.query.filter_by(username=username)
                            .order_by(Edit.timestamp.desc()))
 
-    painting_count = (database.session
-                              .query(func.count(distinct(Edit.painting_id)))
-                              .filter_by(username=username)
-                              .scalar())
+    item_count = (database.session
+                          .query(func.count(distinct(Edit.artwork_id)))
+                          .filter_by(username=username)
+                          .scalar())
 
     return render_template('user_page.html',
                            username=username,
                            edits=Edit.query,
                            edit_list=edit_list,
-                           painting_count=painting_count)
+                           item_count=item_count)
 
 @app.route("/next/Q<int:item_id>")
 def next_page(item_id):
@@ -569,11 +569,11 @@ def get_facets(params):
         if values
     }
 
-def get_painting_params():
+def get_artwork_params():
     return [(pid, qid) for pid, qid in request.args.items()
             if pid.startswith('P') and qid.startswith('Q')]
 
-def filter_painting(params):
+def filter_artwork(params):
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
     q = render_template('query/find_more.sparql', params=params)
     bindings = wdqs.run_query_with_cache(q, flat)
@@ -582,8 +582,8 @@ def filter_painting(params):
 
 @app.route('/catalog')
 def catalog_page():
-    params = get_painting_params()
-    bindings = filter_painting(params)
+    params = get_artwork_params()
+    bindings = filter_artwork(params)
     page = utils.get_int_arg('page') or 1
     page_size = 45
 
@@ -655,7 +655,7 @@ def debug_show_user():
 
 @app.route('/browse')
 def browse_page():
-    params = get_painting_params()
+    params = get_artwork_params()
 
     if not params:
         return browse_index()
@@ -664,7 +664,7 @@ def browse_page():
 
     item_labels = get_labels(qid for pid, qid in params)
 
-    bindings = filter_painting(params)
+    bindings = filter_artwork(params)
 
     facets = get_facets(params)
 

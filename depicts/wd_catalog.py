@@ -176,7 +176,7 @@ def check_catalog(entity, catalog):
             'description': description,
         }
 
-def get_catalog_from_painting(entity):
+def get_catalog_from_artwork(entity):
     catalog_ids = find_catalog_id(entity)
     catalog_detail = []
     for property_id in sorted(catalog_ids):

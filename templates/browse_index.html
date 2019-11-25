@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Wikidata painting depicts{% endblock %}
+{% block title %}Wikidata Art Depiction Explorer{% endblock %}
 
 {% block content %}
 <div class="m-3">
-  <p><a href="{{ url_for('random_painting') }}">random painting</a>
+  <p><a href="{{ url_for('random_artwork') }}">random artwork</a>
 
   {% if not g.user %}
   | <a href="{{ url_for('start_oauth') }}">connect to Wikidata account</a>

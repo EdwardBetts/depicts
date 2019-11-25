@@ -30,8 +30,8 @@ span.description { color: rgb(96, 96, 96); }
 
   <div class="m-2">
   <a href="https://www.wikidata.org/wiki/{{ qid }}" class="btn btn-primary">view on Wikidata</a>
-  <a href="{{ url_for('random_painting') }}" class="btn btn-primary">skip this photo</a>
-  <a href="{{ url_for('browse_page') }}" class="btn btn-primary">browse paintings</a>
+  <a href="{{ url_for('random_artwork') }}" class="btn btn-primary">skip this artwork</a>
+  <a href="{{ url_for('browse_page') }}" class="btn btn-primary">browse artworks</a>
   </div>
 
 
@@ -109,7 +109,7 @@ span.description { color: rgb(96, 96, 96); }
       {% raw %}
       <div id="app" class="mt-2">
         <div v-if="existing_depicts.length">
-          <div>this painting has {{ existing_depicts.length }} existing depicts statement</div>
+          <div>this artwork has {{ existing_depicts.length }} existing depicts statement</div>
         </div>
 
         <div class="mb-2" v-for="(hit, index) in existing_depicts">
@@ -118,14 +118,14 @@ span.description { color: rgb(96, 96, 96); }
             ({{ hit.qid }})
             &nbsp;
             <span v-if="hit.description" class="description">{{ hit.description }}</span>
-            &mdash; {{ hit.count }} paintings
+            &mdash; {{ hit.count }} artworks
           </div>
         </div>
 
-        <h3>what can you see in this painting?</h3>
+        <h3>what can you see in this artwork?</h3>
 
         <div v-if="people.length">
-          <div>These people were born and died in the same years as appears in the title of the painting.</div>
+          <div>These people were born and died in the same years as appears in the title of the artwork.</div>
           <div v-for="person in people">
             <a href="#" @click.prevent="add_person(person)">{{ person.label || '[name missing]' }}</a>,
             {{ person.year_of_birth }}-{{ person.year_of_death}} ({{ person.qid }})
@@ -135,7 +135,7 @@ span.description { color: rgb(96, 96, 96); }
         </div>
 
         <div v-if="new_depicts.length">
-          <div>{{ new_depicts.length }} new items to add to painting depicts statement</div>
+          <div>{{ new_depicts.length }} new items to add to artwork depicts statement</div>
         </div>
 
         <div v-for="(hit, index) in new_depicts">
@@ -144,7 +144,7 @@ span.description { color: rgb(96, 96, 96); }
             {{ hit.label }}
             <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
             <a href="#" @click.prevent="remove(index)" >remove</a>
-            &mdash; {{ hit.count }} existing paintings
+            &mdash; {{ hit.count }} existing artworks
             ({{ hit.qid }})
             <a :href="'https://www.wikidata.org/wiki/' + hit.qid">[wikidata]</a>
           </div>
@@ -153,7 +153,7 @@ span.description { color: rgb(96, 96, 96); }
           </div>
         </div>
 
-        <button type="submit" v-if="new_depicts.length" class="btn btn-primary">add these to painting on Wikidata</button>
+        <button type="submit" v-if="new_depicts.length" class="btn btn-primary">add these to artwork on Wikidata</button>
 
         <input class="form-control-lg my-2 w-100" autocomplete="off" v-model.trim="searchTerms" ref="search" @input="search" />
 
@@ -162,7 +162,7 @@ span.description { color: rgb(96, 96, 96); }
             <div>
               <a href="#" @click.prevent="add_depicts(hit)">{{ hit.label }}</a>
               <span v-if="hit.alt_label">({{ hit.alt_label }})</span>
-              &mdash; {{ hit.count }} existing paintings
+              &mdash; {{ hit.count }} existing artworks
               ({{ hit.qid }})
               <a :href="'https://www.wikidata.org/wiki/' + hit.qid">view on Wikidata</a>
             </div>

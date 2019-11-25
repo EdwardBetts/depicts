@@ -12,15 +12,15 @@
         <h1>{{ self.title() }}</h1>
 
         <div class="alert alert-primary" role="alert">
-        Thanks for contributing. Your edits have been saved to the painting on Wikidata. Use the links below to find other similar paintings to catalog.
+        Thanks for contributing. Your edits have been saved to the artwork on Wikidata. Use the links below to find other similar artworks to catalog.
         </div>
 
   <p>
-  <a href="https://www.wikidata.org/wiki/{{ qid }}">view this painting on Wikidata</a>
+  <a href="https://www.wikidata.org/wiki/{{ qid }}">view this artwork on Wikidata</a>
   |
-  <a href="{{ url_for('random_painting') }}">switch to another painting</a>
+  <a href="{{ url_for('random_artwork') }}">switch to another artwork</a>
   |
-  <a href="{{ url_for('browse_page') }}">browse paintings</a>
+  <a href="{{ url_for('browse_page') }}">browse artworks</a>
   </p>
 
   {% if session.no_find_more %}

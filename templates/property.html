@@ -26,7 +26,7 @@
     &mdash; {{ row.objectDescription.value }}
     {% endif %}
 
-    ({{ '{:,d}'.format(row.count.value | int) }} paintings)
+    ({{ '{:,d}'.format(row.count.value | int) }} artworks)
     {% if 'objectLabel' not in row %}
       <a href="https://wikidata.org/wiki/{{ qid }}">view in Wikidata</a>
     {% endif %}
