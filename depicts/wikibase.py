@@ -5,6 +5,8 @@ def first_datavalue(entity, pid):
             return mainsnak['datavalue']['value']
 
 def get_entity_label(entity):
+    if 'labels' not in entity:
+        return None
     if 'en' in entity['labels']:
         return entity['labels']['en']['value']
 
