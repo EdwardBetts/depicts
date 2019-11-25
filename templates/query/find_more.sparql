@@ -1,6 +1,8 @@
 select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?timeprecision {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-  ?item wdt:P31 wd:Q3305213 .
+  VALUES ?isa { {% for isa in isa_list %} wd:{{ isa }} {% endfor %} }
+
+  ?item wdt:P31 ?isa .
   {% for pid, qid in params %}
     ?item wdt:{{pid}} wd:{{qid}} .
   {% endfor %}
@@ -15,5 +17,4 @@ select ?item ?itemLabel ?image ?artist ?artistLabel ?title ?titleLang ?time ?tim
     BIND(LANG(?title) as ?titleLang)
   }
   OPTIONAL { ?item wdt:P170 ?artist }
-  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
 }

@@ -1,11 +1,11 @@
 select ?property ?object ?objectLabel (count(*) as ?count) {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-  ?item wdt:P31 wd:Q3305213 .
+  VALUES ?isa { {% for isa in isa_list %} wd:{{ isa }} {% endfor %} }
+  ?item wdt:P31 ?isa .
   ?item wdt:P18 ?image .
   {% for pid, qid in params %}
     ?item wdt:{{pid}} wd:{{qid}} .
   {% endfor %}
   values ?property { {% for pid in properties %} wdt:{{pid}}{% endfor %} }
   ?item ?property ?object .
-  FILTER NOT EXISTS { ?item wdt:P180 ?depicts }
 } group by ?property ?propertyLabel ?object ?objectLabel

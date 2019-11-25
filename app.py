@@ -47,6 +47,8 @@ find_more_props = {
     'P2348': 'time period',
     'P361': 'part of',
     'P608': 'exhibition history',
+    'P180': 'depicts',
+    'P31': 'instance of',
 
     # possible future props
     # 'P571': 'inception',
@@ -54,6 +56,17 @@ find_more_props = {
     # 'P1419': 'shape',  (only 2)
     # 'P123': 'publisher', (only 1)
 }
+
+isa_list = [
+    'Q60520',     # sketchbook
+    'Q93184',     # drawing
+    'Q3305213',   # painting
+    'Q15123870',  # lithograph
+    'Q18761202',  # watercolor painting
+    'Q79218',     # triptych
+    'Q2647254',   # study
+    'Q46686'      # reredos
+]
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
@@ -550,6 +563,7 @@ def get_facets(params):
 
     q = render_template('query/facet.sparql',
                         params=params,
+                        isa_list=isa_list,
                         properties=properties)
 
     bindings = wdqs.run_query_with_cache(q, flat + '_facets')
@@ -575,7 +589,9 @@ def get_artwork_params():
 
 def filter_artwork(params):
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
-    q = render_template('query/find_more.sparql', params=params)
+    q = render_template('query/find_more.sparql',
+                        params=params,
+                        isa_list=isa_list)
     bindings = wdqs.run_query_with_cache(q, flat)
 
     return bindings
