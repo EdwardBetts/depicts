@@ -630,14 +630,14 @@ def catalog_page():
                            other=other,
                            title=title)
 
-def get_image_detail_with_cache(items, cache_name, thumbwidth=None):
+def get_image_detail_with_cache(items, cache_name, thumbwidth=None, refresh=False):
     filenames = [cur['image_filename'] for cur in items]
 
     if thumbwidth is None:
         thumbwidth = app.config['THUMBWIDTH']
 
     filename = f'cache/{cache_name}_images.json'
-    if os.path.exists(filename):
+    if not refresh and os.path.exists(filename):
         detail = json.load(open(filename))
     else:
         detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
@@ -686,10 +686,15 @@ def browse_page():
 
     cache_name = f'{flat}_{page}_{page_size}'
     detail = get_image_detail_with_cache(items, cache_name)
+    cache_refreshed = False
 
     for item in items:
         item['url'] = url_for('item_page', item_id=item['item_id'])
-        item['image'] = detail[item['image_filename']]
+        image_filename = item['image_filename']
+        if not cache_refreshed and image_filename not in detail:
+            detail = get_image_detail_with_cache(items, cache_name, refresh=True)
+            cache_refreshed = True
+        item['image'] = detail[image_filename]
 
     title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
                        for pid, qid in params)
