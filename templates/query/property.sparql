@@ -2,7 +2,6 @@ select ?object ?objectLabel ?objectDescription (count(*) as ?count) {
   ?item wdt:P31 wd:Q3305213 .
   ?item wdt:P18 ?image .
   ?item wdt:{{ pid }} ?object .
-  filter not exists { ?item wdt:P180 ?depicts }
   optional {
     ?object rdfs:label ?objectLabel.
     FILTER(LANG(?objectLabel) = "en").
