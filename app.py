@@ -163,7 +163,10 @@ def property_query_page(property_id):
     sort = request.args.get('sort')
     sort_by_name = sort and sort.lower().strip() == 'name'
 
-    q = render_template('query/property.sparql', pid=pid)
+    q = render_template('query/property.sparql',
+                        pid=pid,
+                        isa_list=isa_list)
+
     rows = wdqs.run_query_with_cache(q, name=pid)
 
     no_label_qid = [row['object']['value'].rpartition('/')[2]

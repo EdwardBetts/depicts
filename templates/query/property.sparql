@@ -1,5 +1,7 @@
 select ?object ?objectLabel ?objectDescription (count(*) as ?count) {
-  ?item wdt:P31 wd:Q3305213 .
+  values ?isa { {% for isa in isa_list %} wd:{{ isa }} {% endfor %} }
+
+  ?item wdt:P31 ?isa .
   ?item wdt:P18 ?image .
   ?item wdt:{{ pid }} ?object .
   optional {
