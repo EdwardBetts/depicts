@@ -22,19 +22,19 @@
       <div class="col">options</div>
     </div>
   {% for obj in q %}
-    {% if obj.status_code != 200 %}{% set class=" text-light bg-danger"%}{% endif %}
+    {% if obj.status_code and obj.status_code != 200 %}{% set class=" text-light bg-danger"%}{% endif %}
     <div class="row">
       <div class="col-2{{ class }}">
-        {% if obj.end_time %}
-          {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
-        {% else %}
-          running
-        {% endif %}
+        {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
       </div>
       <div class="col-4"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
 
       <div class="col-1{{ class }}">
-        {{ obj.display_seconds }}&nbsp;secs
+        {% if obj.end_time %}
+          {{ obj.display_seconds }}&nbsp;secs
+        {% else %}
+          running
+        {% endif %}
       </div>
 
       <div class="col-2{{ class }}">
