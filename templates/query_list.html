@@ -25,7 +25,11 @@
     {% if obj.status_code != 200 %}{% set class=" text-light bg-danger"%}{% endif %}
     <div class="row">
       <div class="col-2{{ class }}">
-        {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
+        {% if obj.end_time %}
+          {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
+        {% else %}
+          running
+        {% endif %}
       </div>
       <div class="col-4"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
 

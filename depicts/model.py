@@ -111,9 +111,10 @@ class WikidataQuery(Base):
     error_text = Column(String)
     query_template = Column(String)
 
-    @hybrid_property
+    @property
     def duration(self):
-        return self.end_time - self.start_time
+        if self.end_time:
+            return self.end_time - self.start_time
 
     @property
     def display_seconds(self):
