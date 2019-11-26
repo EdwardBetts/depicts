@@ -899,7 +899,7 @@ def missing_image_report():
 
     return render_template('missing_image.html', item_list=item_list)
 
-@app.route('/report/query')
+@app.route('/report/wdqs')
 def wikidata_query_list():
     q = WikidataQuery.query.order_by(WikidataQuery.start_time.desc())
     return render_template('query_list.html', q=q)
