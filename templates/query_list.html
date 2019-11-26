@@ -15,36 +15,40 @@
     </div>
 
     <div class="row">
-      <div class="col-2">when</div>
-      <div class="col-4">page</div>
-      <div class="col-1">time</div>
       <div class="col-2">template</div>
+      <div class="col-2">when</div>
+      <div class="col-2">time</div>
       <div class="col">options</div>
     </div>
   {% for obj in q %}
     {% if obj.status_code and obj.status_code != 200 %}{% set class=" text-light bg-danger"%}{% endif %}
-    <div class="row">
+    <div class="row pt-3">
+      <div class="col-2{{ class }}">
+        {{ obj.template or '' }}
+      </div>
+
       <div class="col-2{{ class }}">
         {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
       </div>
-      <div class="col-4"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
 
-      <div class="col-1{{ class }}">
+      <div class="col-2{{ class }}">
         {% if obj.end_time %}
-          {{ obj.display_seconds }}&nbsp;secs
+          {{ obj.display_seconds }}&nbsp;seconds
         {% else %}
           <span class="badge badge-info">running</span>
         {% endif %}
       </div>
 
-      <div class="col-2{{ class }}">
-        {{ obj.template or '' }}
-      </div>
 
       <div class="col">
-        <a href="#" class="toggle" data-id="{{ obj.id }}">show/hide</a> |
-        <a href="https://query.wikidata.org/#{{ obj.sparql_query | urlencode }}">run</a>
+        <a href="#" class="toggle" data-id="{{ obj.id }}">show/hide SPARQL</a> |
+        <a href="https://query.wikidata.org/#{{ obj.sparql_query | urlencode }}">view in WDQS</a>
       </div>
+      </div>
+
+      <div class="row">
+        <div class="col-2"></div>
+        <div class="col-10"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
       </div>
 
       <div id="query_{{ obj.id }}" class="row sparql">
