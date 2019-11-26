@@ -4,7 +4,7 @@ import urllib.parse
 import os
 import dateutil.parser
 import hashlib
-from flask import request
+from flask import request, render_template
 from collections import defaultdict
 from datetime import datetime
 from .model import WikidataQuery
@@ -27,24 +27,34 @@ def get_row_text(row, field):
 def commons_uri_to_filename(uri):
     return urllib.parse.unquote(utils.drop_start(uri, commons_start))
 
-def run_query(query):
+def run_from_template(template_name, **context):
+    query = render_template(template_name, **context)
+    return run_query(query, query_template=template_name)
+
+def run_from_template_with_cache(template_name, cache_name=None, **context):
+    query = render_template(template_name, **context)
+    return run_query_with_cache(query, name=cache_name, query_template=template_name)
+
+def run_query(query, query_template=None):
     params = {'query': query, 'format': 'json'}
     start = datetime.utcnow()
-    r = requests.post(query_url, data=params, stream=True)
-    end = datetime.utcnow()
 
     db_query = WikidataQuery(
         start_time=start,
-        end_time=end,
         sparql_query=query,
         path=request.full_path.rstrip('?'),
-        status_code=r.status_code)
+        query_template=query_template)
+    database.session.add(db_query)
+    database.session.commit()
+
+    r = requests.post(query_url, data=params, stream=True)
+    db_query.end_time = datetime.utcnow()
+    db_query.status_code = r.status_code
 
     if r.status_code != 200:
         print(r.text)
         db_query.error_text = r.text
 
-    database.session.add(db_query)
     database.session.commit()
 
     assert r.status_code == 200
@@ -54,7 +64,7 @@ def md5_query(query):
     ''' generate the md5 hexdigest of a SPARQL query '''
     return hashlib.md5(query.encode('utf-8')).hexdigest()
 
-def run_query_with_cache(q, name=None):
+def run_query_with_cache(q, name=None, query_template=None):
     if name is None:
         name = md5_query(q)
     filename = f'cache/{name}.json'
@@ -63,7 +73,7 @@ def run_query_with_cache(q, name=None):
         if isinstance(from_cache, dict) and from_cache.get('query') == q:
             return from_cache['bindings']
 
-    r = run_query(q)
+    r = run_query(q, query_template=query_template)
     bindings = r.json()['results']['bindings']
     json.dump({'query': q, 'bindings': bindings},
               open(filename, 'w'), indent=2)

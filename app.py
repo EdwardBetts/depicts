@@ -163,11 +163,10 @@ def property_query_page(property_id):
     sort = request.args.get('sort')
     sort_by_name = sort and sort.lower().strip() == 'name'
 
-    q = render_template('query/property.sparql',
-                        pid=pid,
-                        isa_list=isa_list)
-
-    rows = wdqs.run_query_with_cache(q, name=pid)
+    rows = wdqs.run_from_template_with_cache('query/property.sparql',
+                                             cache_name=pid,
+                                             pid=pid,
+                                             isa_list=isa_list)
 
     no_label_qid = [row['object']['value'].rpartition('/')[2]
                     for row in rows
@@ -207,8 +206,7 @@ def start():
 
 @app.route('/next')
 def random_artwork():
-    q = render_template('query/artwork_no_depicts.sparql')
-    rows = wdqs.run_query_with_cache(q)
+    rows = wdqs.run_from_template_with_cache('query/artwork_no_depicts.sparql')
     has_depicts = True
     while has_depicts:
         item_id = wdqs.row_id(random.choice(rows))
@@ -559,17 +557,13 @@ def find_more_page(property_id, item_id):
     return redirect(url_for('browse_page', **{pid: qid}))
 
 def get_facets(params):
-    flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
-
     properties = [pid for pid in find_more_props.keys()
                   if pid not in request.args]
 
-    q = render_template('query/facet.sparql',
-                        params=params,
-                        isa_list=isa_list,
-                        properties=properties)
-
-    bindings = wdqs.run_query_with_cache(q, flat + '_facets')
+    bindings = wdqs.run_from_template_with_cache('query/facet.sparql',
+                                                 params=params,
+                                                 isa_list=isa_list,
+                                                 properties=properties)
 
     facets = {key: [] for key in find_more_props.keys()}
     for row in bindings:
@@ -591,13 +585,9 @@ def get_artwork_params():
             if pid.startswith('P') and qid.startswith('Q')]
 
 def filter_artwork(params):
-    flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
-    q = render_template('query/find_more.sparql',
-                        params=params,
-                        isa_list=isa_list)
-    bindings = wdqs.run_query_with_cache(q, flat)
-
-    return bindings
+    return wdqs.run_from_template_with_cache('query/find_more.sparql',
+                                             params=params,
+                                             isa_list=isa_list)
 
 @app.route('/catalog')
 def catalog_page():
@@ -632,6 +622,7 @@ def catalog_page():
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
     thumbwidth = 400
+    # FIXME cache_name can be too long for filesystem
     cache_name = f'{flat}_{page}_{page_size}_{thumbwidth}'
     detail = get_image_detail_with_cache(items, cache_name, thumbwidth=thumbwidth)
 
@@ -740,13 +731,14 @@ def find_more_json():
     qid_list = request.args.getlist('qid')
     limit = 6
 
-    q = render_template('query/find_more_basic.sparql',
-                        qid_list=qid_list,
-                        pid=pid,
-                        limit=limit)
-
     filenames = []
-    bindings = wdqs.run_query_with_cache(q, f'{pid}={",".join(qid_list)}_{limit}')
+    cache_name = f'{pid}={",".join(qid_list)}_{limit}'
+    bindings = wdqs.run_from_template_with_cache('query/find_more_basic.sparql',
+                                                 cache_name=cache_name,
+                                                 qid_list=qid_list,
+                                                 pid=pid,
+                                                 limit=limit)
+
     items = []
     for row in bindings:
         item_id = wdqs.row_id(row)
@@ -764,7 +756,7 @@ def find_more_json():
     for item in items:
         item['image'] = detail[item['filename']]
 
-    return jsonify(items=items, q=q)
+    return jsonify(items=items)
 
 def wikibase_search(terms):
     hits = []

@@ -16,8 +16,9 @@
 
     <div class="row">
       <div class="col-2">when</div>
-      <div class="col-3">page</div>
-      <div class="col-2">query time</div>
+      <div class="col-4">page</div>
+      <div class="col-1">time</div>
+      <div class="col-2">template</div>
       <div class="col">options</div>
     </div>
   {% for obj in q %}
@@ -26,15 +27,19 @@
       <div class="col-2{{ class }}">
         {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
       </div>
-      <div class="col-3"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
+      <div class="col-4"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
+
+      <div class="col-1{{ class }}">
+        {{ obj.display_seconds }}&nbsp;secs
+      </div>
 
       <div class="col-2{{ class }}">
-        {{ obj.display_seconds }}&nbsp;seconds
+        {{ obj.template or '' }}
       </div>
 
       <div class="col">
-        [<a href="#" class="toggle" data-id="{{ obj.id }}">show/hide query</a>]
-        [<a href="https://query.wikidata.org/#{{ obj.sparql_query | urlencode }}">Wikidata Query Service</a>]
+        <a href="#" class="toggle" data-id="{{ obj.id }}">show/hide</a> |
+        <a href="https://query.wikidata.org/#{{ obj.sparql_query | urlencode }}">run</a>
       </div>
       </div>
 

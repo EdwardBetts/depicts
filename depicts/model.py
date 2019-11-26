@@ -109,6 +109,7 @@ class WikidataQuery(Base):
     path = Column(String)
     status_code = Column(Integer)
     error_text = Column(String)
+    query_template = Column(String)
 
     @hybrid_property
     def duration(self):
@@ -117,3 +118,16 @@ class WikidataQuery(Base):
     @property
     def display_seconds(self):
         return f'{self.duration.total_seconds():.1f}'
+
+    @property
+    def template(self):
+        if not self.query_template:
+            return
+
+        t = self.query_template
+        if t.startswith('query/'):
+            t = t[6:]
+        if t.endswith('.sparql'):
+            t = t[:-7]
+
+        return t
