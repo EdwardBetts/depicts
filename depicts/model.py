@@ -132,3 +132,7 @@ class WikidataQuery(Base):
             t = t[:-7]
 
         return t
+
+    @property
+    def bad(self):
+        return self.status_code and self.status_code != 200

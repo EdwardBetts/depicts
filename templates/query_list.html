@@ -15,23 +15,25 @@
     </div>
 
     <div class="row">
+      <div class="col-1"></div>
       <div class="col-2">template</div>
       <div class="col-2">when</div>
       <div class="col-2">time</div>
       <div class="col">options</div>
     </div>
   {% for obj in q %}
-    {% if obj.status_code and obj.status_code != 200 %}{% set class=" text-light bg-danger"%}{% endif %}
-    <div class="row pt-3">
-      <div class="col-2{{ class }}">
+    <div class="border {% if obj.bad %}border-danger{% endif %} my-1 py-1">
+    <div class="row">
+      <div class="col-1"></div>
+      <div class="col-2">
         {{ obj.template or '' }}
       </div>
 
-      <div class="col-2{{ class }}">
+      <div class="col-2">
         {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
       </div>
 
-      <div class="col-2{{ class }}">
+      <div class="col-2">
         {% if obj.end_time %}
           {{ obj.display_seconds }}&nbsp;seconds
         {% else %}
@@ -47,8 +49,8 @@
       </div>
 
       <div class="row">
-        <div class="col-2"></div>
-        <div class="col-10"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
+        <div class="col-1"></div>
+        <div class="col-11"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
       </div>
 
       <div id="query_{{ obj.id }}" class="row sparql">
@@ -64,6 +66,7 @@
           <pre>{{ obj.error_text }}</pre>
         {% endif %}
         </div>
+      </div>
       </div>
   {% endfor %}
   </div>
