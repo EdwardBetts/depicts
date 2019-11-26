@@ -35,7 +35,11 @@ def run_from_template_with_cache(template_name, cache_name=None, **context):
     query = render_template(template_name, **context)
     return run_query_with_cache(query, name=cache_name, query_template=template_name)
 
-def run_query(query, query_template=None):
+def run_query(query, **kwargs):
+    r, db_query = record_query(query, **kwargs)
+    return r
+
+def record_query(query, query_template=None):
     params = {'query': query, 'format': 'json'}
     start = datetime.utcnow()
 
@@ -58,7 +62,7 @@ def run_query(query, query_template=None):
     database.session.commit()
 
     assert r.status_code == 200
-    return r
+    return r, db_query
 
 def md5_query(query):
     ''' generate the md5 hexdigest of a SPARQL query '''
@@ -73,11 +77,13 @@ def run_query_with_cache(q, name=None, query_template=None):
         if isinstance(from_cache, dict) and from_cache.get('query') == q:
             return from_cache['bindings']
 
-    r = run_query(q, query_template=query_template)
+    r, db_query = record_query(q, query_template=query_template)
     bindings = r.json()['results']['bindings']
     json.dump({'query': q, 'bindings': bindings},
               open(filename, 'w'), indent=2)
 
+    db_query.row_count = len(bindings)
+    database.session.commit()
     return bindings
 
 def format_time(row_time, row_timeprecision):

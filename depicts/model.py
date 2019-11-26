@@ -110,6 +110,7 @@ class WikidataQuery(Base):
     status_code = Column(Integer)
     error_text = Column(String)
     query_template = Column(String)
+    row_count = Column(Integer)
 
     @property
     def duration(self):
