@@ -5,7 +5,7 @@ from depicts import (utils, wdqs, commons, mediawiki, artwork, database,
                      wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, ArtworkItem,
-                           Language)
+                           Language, WikidataQuery)
 from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
 from werkzeug.exceptions import InternalServerError
@@ -895,6 +895,11 @@ def missing_image_report():
         # TODO: call wikidata search to find images that depict item
 
     return render_template('missing_image.html', item_list=item_list)
+
+@app.route('/report/query')
+def wikidata_query_list():
+    q = WikidataQuery.query.order_by(WikidataQuery.start_time.desc())
+    return render_template('query_list.html', q=q)
 
 
 if __name__ == "__main__":

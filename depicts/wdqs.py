@@ -4,8 +4,11 @@ import urllib.parse
 import os
 import dateutil.parser
 import hashlib
+from flask import request
 from collections import defaultdict
-from . import utils
+from datetime import datetime
+from .model import WikidataQuery
+from . import utils, database
 
 query_url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
 url_start = 'http://www.wikidata.org/entity/Q'
@@ -26,9 +29,24 @@ def commons_uri_to_filename(uri):
 
 def run_query(query):
     params = {'query': query, 'format': 'json'}
+    start = datetime.utcnow()
     r = requests.post(query_url, data=params, stream=True)
+    end = datetime.utcnow()
+
+    db_query = WikidataQuery(
+        start_time=start,
+        end_time=end,
+        sparql_query=query,
+        path=request.full_path.rstrip('?'),
+        status_code=r.status_code)
+
     if r.status_code != 200:
         print(r.text)
+        db_query.error_text = r.text
+
+    database.session.add(db_query)
+    database.session.commit()
+
     assert r.status_code == 200
     return r
 

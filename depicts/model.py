@@ -4,6 +4,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import column_property, relationship, synonym
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.dialects import postgresql
 from urllib.parse import quote
@@ -98,3 +99,21 @@ class Edit(Base):
     @property
     def user_wikidata_url(self):
         return 'https://www.wikidata.org/wiki/User:' + self.url_norm_username
+
+class WikidataQuery(Base):
+    __tablename__ = 'wikidata_query'
+    id = Column(Integer, primary_key=True)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    sparql_query = Column(String)
+    path = Column(String)
+    status_code = Column(Integer)
+    error_text = Column(String)
+
+    @hybrid_property
+    def duration(self):
+        return self.end_time - self.start_time
+
+    @property
+    def display_seconds(self):
+        return f'{self.duration.total_seconds():.1f}'

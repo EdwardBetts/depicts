@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-2">
+
+  <div class="container">
+    <div class="row">
+      <div class="col-2">when</div>
+      <div class="col-3">page</div>
+      <div class="col-2">query time</div>
+      <div class="col">options</div>
+    </div>
+  {% for obj in q %}
+    {% if obj.status_code != 200 %}{% set class=" text-light bg-danger"%}{% endif %}
+    <div class="row">
+      <div class="col-2{{ class }}">
+        {{ obj.start_time.strftime('%Y %b %d %H:%M') }}
+      </div>
+      <div class="col-3"><a href="{{ obj.path }}">{{ obj.path }}</a></div>
+
+      <div class="col-2{{ class }}">
+        {{ obj.display_seconds }}&nbsp;seconds
+      </div>
+
+      <div class="col">
+        [<a href="#" class="toggle" data-id="{{ obj.id }}">show/hide query</a>]
+        [<a href="https://query.wikidata.org/#{{ obj.sparql_query | urlencode }}">Wikidata Query Service</a>]
+      </div>
+      </div>
+
+      <div id="query_{{ obj.id }}" class="row sparql">
+        <div class="col">
+          <pre>{{ obj.sparql_query }}</pre>
+        </div>
+      </div>
+
+      <div class="row error">
+        <div class="col">
+        {% if obj.status_code != 200 %}
+          <div>status code: {{ obj.status_code }}</div>
+          <pre>{{ obj.error_text }}</pre>
+        {% endif %}
+        </div>
+      </div>
+  {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+  $('.sparql').hide();
+  $('.error').hide();
+
+  $('.toggle').click(function() {
+    var query_id = $(this).data('id');
+
+    $('#query_' + query_id).toggle();
+  });
+
+</script>
+{% endblock %}
