@@ -572,6 +572,8 @@ def get_facets(params):
         label = row['objectLabel']['value']
         count = int(row['count']['value'])
 
+        if pid not in find_more_props:
+            continue
         facets[pid].append({'qid': qid, 'label': label, 'count': count})
 
     return {
