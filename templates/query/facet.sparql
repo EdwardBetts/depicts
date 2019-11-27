@@ -1,6 +1,6 @@
 select ?property ?object ?objectLabel (count(*) as ?count) {
   service wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-  values ?isa {{% for isa in isa_list %} wd:{{ isa }} {% endfor %}}
+  values ?isa { {% for isa in isa_list %} wd:{{ isa }} {% endfor %} }
   ?item wdt:P31 ?isa .
   ?item wdt:P18 ?image .
   {% for pid, qid in params %}
