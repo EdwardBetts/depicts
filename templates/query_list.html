@@ -20,7 +20,7 @@
       <div class="col-2">when</div>
       <div class="col-1">rows</div>
       <div class="col-2">time</div>
-      <div class="col">options</div>
+      <div class="col"></div>
     </div>
   {% for obj in q %}
     <div class="border {% if obj.bad %}border-danger{% endif %} my-1 py-1">
@@ -35,7 +35,11 @@
       </div>
 
       <div class="col-1">
-        {{ obj.row_count if obj.row_count is not none else '' }}
+        {% if obj.row_count is not none %}
+          {{ obj.row_count }}
+        {% elif obj.bad %}
+          <span class="badge badge-danger">error</span>
+        {% endif %}
       </div>
 
       <div class="col-2">
@@ -48,7 +52,10 @@
 
 
       <div class="col">
-        <a href="#" class="toggle" data-id="{{ obj.id }}">show/hide SPARQL</a> |
+        <a href="#" class="toggle-sparql" data-id="{{ obj.id }}">view SPARQL</a> |
+        {% if obj.bad %}
+        <a href="#" class="toggle-error" data-id="{{ obj.id }}">view error</a> |
+        {% endif %}
         <a href="https://query.wikidata.org/#{{ obj.sparql_query | urlencode }}">view in WDQS</a>
       </div>
       </div>
@@ -64,7 +71,7 @@
         </div>
       </div>
 
-      <div class="row error">
+      <div id="error_{{ obj.id }}" class="row error">
         <div class="col">
         {% if obj.status_code != 200 %}
           <div>status code: {{ obj.status_code }}</div>
@@ -85,11 +92,23 @@
   $('.sparql').hide();
   $('.error').hide();
 
-  $('.toggle').click(function() {
+  $('.toggle-sparql').click(function(event) {
+    event.preventDefault();
+
     var query_id = $(this).data('id');
 
     $('#query_' + query_id).toggle();
   });
+
+  $('.toggle-error').click(function(event) {
+    event.preventDefault();
+
+    var query_id = $(this).data('id');
+
+    $('#error_' + query_id).toggle();
+  });
+
+
 
 </script>
 {% endblock %}
