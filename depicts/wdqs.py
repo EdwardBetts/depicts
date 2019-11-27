@@ -4,7 +4,7 @@ import urllib.parse
 import os
 import dateutil.parser
 import hashlib
-from flask import request, render_template
+from flask import request, render_template, g
 from collections import defaultdict
 from datetime import datetime
 from .model import WikidataQuery
@@ -47,7 +47,9 @@ def record_query(query, query_template=None):
         start_time=start,
         sparql_query=query,
         path=request.full_path.rstrip('?'),
-        query_template=query_template)
+        query_template=query_template,
+        page_title=getattr(g, 'title', None),
+        endpoint=request.endpoint)
     database.session.add(db_query)
     database.session.commit()
 

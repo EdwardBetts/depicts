@@ -160,6 +160,7 @@ def save(item_id):
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
     pid = f'P{property_id}'
+    g.title = find_more_props[pid]
     sort = request.args.get('sort')
     sort_by_name = sort and sort.lower().strip() == 'name'
 
@@ -189,10 +190,9 @@ def property_query_page(property_id):
         has_label = sorted((row for row in rows if 'objectLabel' in row),
                             key=lambda row: locale.strxfrm(row['objectLabel']['value']))
         rows = has_label + no_label
-    label = find_more_props[pid]
 
     return render_template('property.html',
-                           label=label,
+                           label=g.title,
                            order=('name' if sort_by_name else 'count'),
                            pid=pid,
                            rows=rows)
@@ -674,6 +674,9 @@ def browse_page():
 
     item_labels = get_labels(qid for pid, qid in params)
 
+    g.title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
+                         for pid, qid in params)
+
     bindings = filter_artwork(params)
 
     facets = get_facets(params)
@@ -706,15 +709,12 @@ def browse_page():
             cache_refreshed = True
         item['image'] = detail[image_filename]
 
-    title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
-                       for pid, qid in params)
-
     catalog_url = url_for('catalog_page', **dict(params))
 
     return render_template('find_more.html',
                            facets=facets,
                            prop_labels=find_more_props,
-                           label=title,
+                           label=g.title,
                            pager=pager,
                            params=params,
                            item_map=item_map,

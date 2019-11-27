@@ -111,6 +111,8 @@ class WikidataQuery(Base):
     error_text = Column(String)
     query_template = Column(String)
     row_count = Column(Integer)
+    page_title = Column(String)
+    endpoint = Column(String)
 
     @property
     def duration(self):
