@@ -78,12 +78,14 @@ def exception_handler(e):
     return render_template('show_error.html', tb=tb), 500
 
 @app.template_global()
-def set_url_args(**new_args):
+def set_url_args(endpoint=None, **new_args):
+    if endpoint is None:
+        endpoint = request.endpoint
     args = request.view_args.copy()
     args.update(request.args)
     args.update(new_args)
     args = {k: v for k, v in args.items() if v is not None}
-    return url_for(request.endpoint, **args)
+    return url_for(endpoint, **args)
 
 @app.template_global()
 def current_url():
@@ -99,8 +101,8 @@ def init_profile():
 def global_user():
     g.user = wikidata_oauth.get_username()
 
-@app.route('/settings')
-def user_settings():
+@app.route('/find_more_setting')
+def flip_find_more():
     session['no_find_more'] = not session.get('no_find_more')
     display = {True: 'on', False: 'off'}[not session['no_find_more']]
 
@@ -156,6 +158,14 @@ def save(item_id):
         database.session.commit()
 
     return redirect(url_for('next_page', item_id=item_id))
+
+@app.route('/settings', methods=['GET', 'POST'])
+def user_settings():
+    return render_template('user_settings.html')
+
+@app.route('/test/lookup')
+def test_lookup_page():
+    return render_template('test_lookup.html')
 
 @app.route("/property/P<int:property_id>")
 def property_query_page(property_id):
@@ -560,7 +570,7 @@ def find_more_page(property_id, item_id):
 def tool_info():
     info = {
         'name': 'wade',
-        'title': 'Wikidata Art Depiction Tool',
+        'title': 'Wikidata Art Depiction Explorer',
         'description': 'Add depicts statements to works of art.',
         'url': 'https://art.wikidata.link/',
         'keywords': 'art, depicts, paintings, depiction',
@@ -678,6 +688,22 @@ def debug_show_user():
     userinfo = wikidata_oauth.userinfo_call()
     return '<pre>' + json.dumps(userinfo, indent=2) + '</pre>'
 
+@app.route('/browse/facets.json')
+def browse_facets():
+    params = get_artwork_params()
+    if not params:
+        return jsonify(notice='facet criteria missing')
+
+    facets = get_facets(params)
+
+    for key, values in facets.items():
+        for v in values:
+            v['href'] = set_url_args(endpoint='browse_page', **{key: v['qid']})
+
+    return jsonify(params=params,
+                   facets=facets,
+                   prop_labels=find_more_props)
+
 @app.route('/browse')
 def browse_page():
     params = get_artwork_params()
@@ -694,7 +720,11 @@ def browse_page():
 
     bindings = filter_artwork(params)
 
-    facets = get_facets(params)
+    try:
+        facets = get_facets(params)
+    except wdqs.QueryError:
+        facets = {}
+
 
     page_size = 45
 
