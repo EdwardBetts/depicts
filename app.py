@@ -556,6 +556,19 @@ def find_more_page(property_id, item_id):
     pid, qid = f'P{property_id}', f'Q{item_id}'
     return redirect(url_for('browse_page', **{pid: qid}))
 
+@app.route('/toolinfo.json')
+def tool_info():
+    info = {
+        'name': 'wade',
+        'title': 'Wikidata Art Depiction Tool',
+        'description': 'Add depicts statements to works of art.',
+        'url': 'https://art.wikidata.link/',
+        'keywords': 'art, depicts, paintings, depiction',
+        'author': 'Edward Betts',
+        'repository': 'https://github.com/edwardbetts/depicts.git',
+    }
+    return jsonify(info)
+
 def get_facets(params):
     properties = [pid for pid in find_more_props.keys()
                   if pid not in request.args]
