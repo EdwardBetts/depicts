@@ -14,6 +14,16 @@ query_url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
 url_start = 'http://www.wikidata.org/entity/Q'
 commons_start = 'http://commons.wikimedia.org/wiki/Special:FilePath/'
 
+class QueryError(Exception):
+    def __init__(self, query, r):
+        self.query = query
+        self.r = r
+
+class QueryTimeout(QueryError):
+    def __init__(self, query, r):
+        self.query = query
+        self.r = r
+
 def row_id(row, field='item'):
     return int(utils.drop_start(row[field]['value'], url_start))
 
