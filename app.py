@@ -12,6 +12,7 @@ from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
 from collections import defaultdict
+import hashlib
 import json
 import os
 import locale
@@ -437,7 +438,7 @@ def get_entity_label_and_language(entity):
 def get_labels(keys, name=None):
     keys = sorted(keys, key=lambda i: int(i[1:]))
     if name is None:
-        name = '_'.join(keys)
+        name = hashlib.md5('_'.join(keys).encode('utf-8')).hexdigest()
     filename = f'cache/{name}_labels.json'
     labels = []
     if os.path.exists(filename):
