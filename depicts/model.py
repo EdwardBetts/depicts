@@ -46,12 +46,21 @@ class DepictsItemAltLabel(Base):
     def __init__(self, alt_label):
         self.alt_label = alt_label
 
-class ArtworkItem(Base):
-    __tablename__ = 'artwork'
+class Item(Base):
+    __tablename__ = 'item'
     item_id = Column(Integer, primary_key=True, autoincrement=False)
     label = Column(String)
     entity = Column(postgresql.JSON)
+    lastrevid = Column(Integer, nullable=True, unique=True)
+    modified = Column(DateTime, nullable=True)
+    is_artwork = Column(Boolean, nullable=False, default=False)
     qid = column_property('Q' + cast(item_id, String))
+
+class Triple(Base):
+    __tablename__ = 'triple'
+    subject_id = Column(Integer, primary_key=True)
+    predicate_id = Column(Integer, primary_key=True, index=True)
+    object_id = Column(Integer, primary_key=True, index=True)
 
 class HumanItem(Base):
     __tablename__ = 'human'
@@ -81,7 +90,7 @@ class Language(Base):
 class Edit(Base):
     __tablename__ = 'edit'
     username = Column(String, primary_key=True)
-    artwork_id = Column(Integer, ForeignKey('artwork.item_id'), primary_key=True)
+    artwork_id = Column(Integer, ForeignKey('item.item_id'), primary_key=True)
     depicts_id = Column(Integer, ForeignKey('depicts.item_id'), primary_key=True)
     timestamp = Column(DateTime, default=now_utc())
     lastrevid = Column(Integer, nullable=True)
@@ -89,7 +98,7 @@ class Edit(Base):
     artwork_qid = column_property('Q' + cast(artwork_id, String))
     depicts_qid = column_property('Q' + cast(depicts_id, String))
 
-    artwork = relationship('ArtworkItem')
+    artwork = relationship('Item')
     depicts = relationship('DepictsItem')
 
     @property

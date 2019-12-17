@@ -4,7 +4,7 @@ from flask import Flask, render_template, url_for, redirect, request, g, jsonify
 from depicts import (utils, wdqs, commons, mediawiki, artwork, database,
                      wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit)
 from depicts.pager import Pagination, init_pager
-from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, ArtworkItem,
+from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, Item,
                            Language, WikidataQuery)
 from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
@@ -121,11 +121,11 @@ def save(item_id):
 
     token = wikidata_oauth.get_token()
 
-    artwork_item = ArtworkItem.query.get(item_id)
+    artwork_item = Item.query.get(item_id)
     if artwork_item is None:
         artwork_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
         label = wikibase.get_entity_label(artwork_entity)
-        artwork_item = ArtworkItem(item_id=item_id, label=label, entity=artwork_entity)
+        artwork_item = Item(item_id=item_id, label=label, entity=artwork_entity)
         database.session.add(artwork_item)
         database.session.commit()
 
@@ -221,7 +221,7 @@ def random_artwork():
     has_depicts = True
     while has_depicts:
         item_id = wdqs.row_id(random.choice(rows))
-        if ArtworkItem.query.get(item_id):
+        if Item.query.get(item_id):
             continue
         entity = mediawiki.get_entity_with_cache(f'Q{item_id}', refresh=True)
         en_label = wikibase.get_en_label(entity)
@@ -380,9 +380,9 @@ def item_page(item_id):
 
     people = human.from_name(label) if label else None
 
-    artwork_item = ArtworkItem.query.get(item_id)
+    artwork_item = Item.query.get(item_id)
     if artwork_item is None:
-        artwork_item = ArtworkItem(item_id=item_id, label=label, entity=entity)
+        artwork_item = Item(item_id=item_id, label=label, entity=entity)
         database.session.add(artwork_item)
 
     catalog = wd_catalog.get_catalog_from_artwork(entity)
