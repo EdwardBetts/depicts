@@ -53,13 +53,16 @@ def record_query(query, query_template=None):
     params = {'query': query, 'format': 'json'}
     start = datetime.utcnow()
 
+    path = request.full_path.rstrip('?') if request else None
+    endpoint = request.endpoint if request else None
+
     db_query = WikidataQuery(
         start_time=start,
         sparql_query=query,
-        path=request.full_path.rstrip('?'),
+        path=path,
         query_template=query_template,
         page_title=getattr(g, 'title', None),
-        endpoint=request.endpoint)
+        endpoint=endpoint)
     database.session.add(db_query)
     database.session.commit()
 
@@ -68,12 +71,15 @@ def record_query(query, query_template=None):
     db_query.status_code = r.status_code
 
     if r.status_code != 200:
-        print(r.text)
         db_query.error_text = r.text
+        database.session.commit()
+
+        if 'java.util.concurrent.TimeoutException' in r.text:
+            raise QueryTimeout(params, r)
+        else:
+            raise QueryError(params, r)
 
     database.session.commit()
-
-    assert r.status_code == 200
     return r, db_query
 
 def md5_query(query):
