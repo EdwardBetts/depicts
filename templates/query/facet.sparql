@@ -8,4 +8,4 @@ select ?property ?object ?objectLabel (count(*) as ?count) {
   {% endfor %}
   filter (strstarts(str(?property), "http://www.wikidata.org/prop/direct/P") )
   ?item ?property ?object .
-} group by ?property ?propertyLabel ?object ?objectLabel
+} group by ?property ?object ?objectLabel
