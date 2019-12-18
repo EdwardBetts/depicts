@@ -21,6 +21,14 @@
   #}
 
   <p>
+    Current filter &ndash;
+    {% for pid, qid in params %}
+      <span>{{ prop_labels[pid] }}: {{ linked_labels[qid] }}
+        <a href="{{ set_url_args(page=None, **{pid: None}) }}">[remove filter]</a></span>
+    {% endfor %}
+  </p>
+
+  <p>
     <a href="{{ url_for('browse_page') }}">browse index</a>
     {% for pid, qid in params %}
       | <a href="{{ url_for('property_query_page', property_id=pid[1:]) }}">browse {{ labels[pid] }} list</a>
@@ -31,34 +39,48 @@
 
 <p class="mb-3">
   <a href="#" id="toggle-filters" class="btn btn-primary">toggle filters</a>
+  {#
   <a href="{{ catalog_url }}" class="btn btn-primary">catalog artwork</a>
+  #}
 </p>
 
   <div id="filters">
   {% for key, values in facets.items() %}
     <p>{{ prop_labels[key] }}:
       {% for v in values %}
-        <a href="{{ set_url_args(**{key: v.qid}) }}">{{ v.label }}</a> ({{ v.count }})
+        <a href="{{ set_url_args(page=None, **{key: v.qid}) }}">{{ v.label }}</a>
+        ({{ '{:,d}'.format(v.count) }})
         {% if not loop.last %}|{% endif %}
       {% endfor %}
     </p>
   {% endfor %}
   </div>
 
+{{ render_pagination(pager) }}
+
 <div class="card-columns">
   {% for item in items %}
   {% set image = item.image %}
   <div class="card">
-    <a href="{{ item.url }}">
+    <a href="{{ url_for('item_page', item_id=item.item_id) }}">
       {# <img src="{{ image.thumburl }}" height="{{ image.thumbheight }}" width="{{ image.thumbwidth }}" class="card-img-top"></a> #}
       <img src="{{ image.thumburl }}" class="card-img-top"></a>
     <div class="card-body">
       <h5 class="card-title">{{ item.label }}</h5>
-      <p class="card-text">by {{ item.artist_name }}
+      <p class="card-text">
+       <div>
+       {% for qid in item.instance_of %}
+         {% if not loop.first %} / {% endif %}
+         <span>{{ linked_labels[qid] }}</span>
+       {% endfor %}
+       </div>
+      {% if item.artist %}
+        by {{ linked_labels[item.artist] }}
+      {% endif %}
       {% if item.date %}({{ item.date }}){% endif %}
         <div>
-        {% for depicts_label in item.depicts %}
-          <span class="badge badge-primary">{{ depicts_label }}</span>
+        {% for depicts_qid in item.depicts %}
+          <span class="badge badge-primary">{{ linked_labels[depicts_qid] }}</span>
         {% endfor %}
         </div>
       </p>

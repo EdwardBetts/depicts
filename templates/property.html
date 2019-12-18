@@ -16,19 +16,17 @@
   {% endif %}
   </p>
 
-  <ul>
-  {% for row in rows if '/' in row.object.value %}
-    {% set qid = row.object.value.rpartition('/')[2] %}
-    {% set row_label = row.objectLabel.value if 'objectLabel' in row else '[ label missing ]' %}
-    <li>
-      <a href="{{ url_for('browse_page', **{pid: qid}) }}">{{ row_label }}</a>
-    {% if 'objectDescription' in row %}
-    &mdash; {{ row.objectDescription.value }}
-    {% endif %}
+  <p>Total: {{ hits | length }}</p>
 
-    ({{ '{:,d}'.format(row.count.value | int) }} artworks)
-    {% if 'objectLabel' not in row %}
-      <a href="https://wikidata.org/wiki/{{ qid }}">view in Wikidata</a>
+  <ul>
+  {% for hit in hits %}
+    <li>
+      <a href="{{ url_for('browse_page', **{pid: hit.qid}) }}">{{ hit.label }}</a>
+
+    ({{ '{:,d}'.format(hit.count) }} artworks)
+
+    {% if not hit.label %}
+      <a href="https://wikidata.org/wiki/{{ hit.qid }}">view in Wikidata</a>
     {% endif %}
     </li>
   {% endfor %}

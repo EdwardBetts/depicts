@@ -1,5 +1,6 @@
 from flask import request
 from itertools import islice
+from datetime import datetime
 import urllib.parse
 import inflect
 
@@ -74,3 +75,25 @@ def wiki_url(title, site, ns=None):
 def get_int_arg(name):
     if name in request.args and request.args[name].isdigit():
         return int(request.args[name])
+
+def format_time(time_value, precision):
+    # FIXME handle dates like '1965-04-00T00:00:00Z'
+    # FIXME handle BC dates properly, "120 B.C." instead of "-120"
+    year = None
+    if '-00' in time_value:
+        # can't be represented as python datetime
+        year = int(time_value[:time_value.find('-', 1)])
+    else:
+        t = datetime.strptime(time_value[1:], "%Y-%m-%dT%H:%M:%SZ")
+        year = t.year
+
+    if precision == 9:
+        return str(year)
+    if precision == 8:
+        return f'{year}s'
+    if precision == 7:
+        return f'{ordinal((year // 100) + 1)} century'
+    if precision == 6:
+        return f'{ordinal((year // 1000) + 1)} millennium'
+
+    return time_value

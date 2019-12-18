@@ -19,7 +19,7 @@
   <ul>
   {% for pid, label in props.items() %}
     <li><a href="{{ url_for('property_query_page', property_id=pid[1:]) }}">{{ label }}</a>
-    ({{ pid }})
+      ({{ pid }}) &ndash; {{ '{:,d}'.format(counts[pid]) }}
     </li>
   {% endfor %}
   </ul>

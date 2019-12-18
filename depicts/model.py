@@ -1,5 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
 from .database import session, now_utc
+from . import wikibase, utils
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import column_property, relationship, synonym
@@ -49,12 +50,58 @@ class DepictsItemAltLabel(Base):
 class Item(Base):
     __tablename__ = 'item'
     item_id = Column(Integer, primary_key=True, autoincrement=False)
-    label = Column(String)
+    # label = Column(String)  # column removed 2019-12-18
     entity = Column(postgresql.JSON)
     lastrevid = Column(Integer, nullable=True, unique=True)
     modified = Column(DateTime, nullable=True)
     is_artwork = Column(Boolean, nullable=False, default=False)
     qid = column_property('Q' + cast(item_id, String))
+
+    def image_count(self):
+        p18 = self.entity['claims'].get('P18')
+        return len(p18) if p18 else 0
+
+    def image_filename(self):
+        p18 = self.entity['claims'].get('P18')
+        if not p18:
+            return
+
+        try:
+            return p18[0]['mainsnak']['datavalue']['value']
+        except KeyError:
+            return
+
+    @property
+    def label(self):
+        return wikibase.get_entity_label(self.entity)
+
+    @property
+    def artist(self):
+        v = wikibase.first_datavalue(self.entity, 'P170')
+        if not v:
+            return
+        return v['id']
+
+    @property
+    def depicts(self):
+        return self.linked_qids('P180')
+
+    @property
+    def instance_of(self):
+        return self.linked_qids('P31')
+
+    def linked_qids(self, prop):
+        values = self.entity['claims'].get(prop) or []
+        return [v['mainsnak']['datavalue']['value']['id']
+                for v in values
+                if 'datavalue' in v['mainsnak']]
+
+
+    @property
+    def date(self):
+        v = wikibase.first_datavalue(self.entity, 'P571')
+        if v:
+            return utils.format_time(v['time'], v['precision'])
 
 class Triple(Base):
     __tablename__ = 'triple'

@@ -5,13 +5,17 @@ from depicts import (utils, wdqs, commons, mediawiki, artwork, database,
                      wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, Item,
-                           Language, WikidataQuery)
+                           Language, WikidataQuery, Triple)
 from depicts.error_mail import setup_error_mail
 from requests_oauthlib import OAuth1Session
 from werkzeug.exceptions import InternalServerError
 from werkzeug.debug.tbtools import get_current_traceback
 from sqlalchemy import func, distinct
+from sqlalchemy.orm import aliased
+from sqlalchemy.sql.expression import desc
 from collections import defaultdict
+from datetime import datetime
+import itertools
 import hashlib
 import json
 import os
@@ -175,38 +179,28 @@ def property_query_page(property_id):
     sort = request.args.get('sort')
     sort_by_name = sort and sort.lower().strip() == 'name'
 
-    rows = wdqs.run_from_template_with_cache('query/property.sparql',
-                                             cache_name=pid,
-                                             pid=pid,
-                                             isa_list=isa_list)
+    q = (database.session.query(Triple.object_id,
+                                func.count(func.distinct(Triple.subject_id)).label('c'))
+                         .filter_by(predicate_id=property_id)
+                         .join(Item, Item.item_id == Triple.subject_id)
+                         .filter_by(is_artwork=True)
+                         .group_by(Triple.object_id)
+                         .order_by(desc('c')))
 
-    no_label_qid = [row['object']['value'].rpartition('/')[2]
-                    for row in rows
-                    if 'objectLabel' not in row and '/' in row['object']['value']]
+    labels = get_labels_db({f'Q{object_id}' for object_id, c in q})
 
-    if no_label_qid:
-        extra_label = get_labels(no_label_qid, name=f'{pid}_extra_labels')
-        if extra_label:
-            for row in rows:
-                item = row['object']['value']
-                if 'objectLabel' in row or '/' not in item:
-                    continue
-                qid = item.rpartition('/')[2]
-                if extra_label.get(qid):
-                    row['objectLabel'] = {'value': extra_label[qid]}
-
-    if sort_by_name:
-        # put rows with no English label at the end
-        no_label = [row for row in rows if 'objectLabel' not in row]
-        has_label = sorted((row for row in rows if 'objectLabel' in row),
-                            key=lambda row: locale.strxfrm(row['objectLabel']['value']))
-        rows = has_label + no_label
+    hits = []
+    for object_id, count in q:
+        qid = f'Q{object_id}'
+        hits.append({'qid': qid,
+                     'label': labels.get(qid) or '[item missing]',
+                     'count': count})
 
     return render_template('property.html',
                            label=g.title,
                            order=('name' if sort_by_name else 'count'),
                            pid=pid,
-                           rows=rows)
+                           hits=hits)
 
 @app.route('/')
 def start():
@@ -446,13 +440,49 @@ def get_labels(keys, name=None):
         if isinstance(from_cache, dict) and from_cache.get('keys') == keys:
             labels = from_cache['labels']
     if not labels:
-        for cur in utils.chunk(keys, 50):
+        print(len(keys))
+        for num, cur in enumerate(utils.chunk(keys, 50)):
+            print(f'{num * 50} / {len(keys)}')
             labels += mediawiki.get_entities(cur, props='labels')
 
         json.dump({'keys': keys, 'labels': labels},
                   open(filename, 'w'), indent=2)
 
     return {entity['id']: wikibase.get_entity_label(entity) for entity in labels}
+
+def get_labels_db(keys):
+    keys = set(keys)
+    labels = {}
+    missing = set()
+    for qid in keys:
+        item = Item.query.get(qid[1:])
+        if item:
+            labels[qid] = item.label
+        else:
+            missing.add(qid)
+
+    print(len(missing))
+    page_size = 50
+    for num, cur in enumerate(utils.chunk(missing, page_size)):
+        print(f'{num * page_size} / {len(missing)}')
+        for entity in mediawiki.get_entities(cur):
+            if 'redirects' in entity:
+                continue
+
+            qid = entity['id']
+
+            modified = datetime.strptime(entity['modified'], "%Y-%m-%dT%H:%M:%SZ")
+            # FIXME: check if the item is an artwork and set is_artwork correctly
+            item = Item(item_id=qid[1:],
+                        entity=entity,
+                        lastrevid=entity['lastrevid'],
+                        modified=modified,
+                        is_artwork=False)
+            database.session.add(item)
+            labels[qid] = item.label
+        database.session.commit()
+
+    return labels
 
 def build_other_set(entity):
     other_items = set()
@@ -667,7 +697,7 @@ def catalog_page():
                            title=title)
 
 def get_image_detail_with_cache(items, cache_name, thumbwidth=None, refresh=False):
-    filenames = [cur['image_filename'] for cur in items]
+    filenames = [cur.image_filename() for cur in items]
 
     if thumbwidth is None:
         thumbwidth = app.config['THUMBWIDTH']
@@ -682,7 +712,17 @@ def get_image_detail_with_cache(items, cache_name, thumbwidth=None, refresh=Fals
     return detail
 
 def browse_index():
-    return render_template('browse_index.html', props=find_more_props)
+    q = (database.session.query(Triple.predicate_id,
+                                func.count(func.distinct(Triple.object_id)))
+                         .join(Item, Triple.subject_id == Item.item_id)
+                         .filter_by(is_artwork=True)
+                         .group_by(Triple.predicate_id))
+
+    counts = {f'P{predicate_id}': count for predicate_id, count in q}
+
+    return render_template('browse_index.html',
+                           props=find_more_props,
+                           counts=counts)
 
 @app.route('/debug/show_user')
 def debug_show_user():
@@ -705,41 +745,70 @@ def browse_facets():
                    facets=facets,
                    prop_labels=find_more_props)
 
+def get_db_items(params):
+    ''' Get items for browse page based on criteria. '''
+    q = Item.query
+    for pid, qid in params:
+        q = (q.join(Triple, Item.item_id == Triple.subject_id, aliased=True)
+              .filter(Triple.predicate_id == pid[1:], Triple.object_id == qid[1:]))
+
+    return q
+
+def get_db_facets(params):
+    t = aliased(Triple)
+    q = database.session.query(t.predicate_id, func.count().label('count'), t.object_id)
+    facet_limit = 15
+
+    for pid, qid in params:
+        q = (q.join(Triple, t.subject_id == Triple.subject_id, aliased=True)
+              .filter(Triple.predicate_id == pid[1:],
+                      Triple.object_id == qid[1:],
+                      t.predicate_id != pid[1:],
+                      t.object_id != qid[1:]))
+
+    q = q.group_by(t.predicate_id, t.object_id)
+
+    results = sorted(tuple(row) for row in q.all())
+
+    facet_list = {}
+    subject_qids = set()
+    for predicate_id, x in itertools.groupby(results, lambda row: row[0]):
+        hits = sorted(list(x), key=lambda row: row[1], reverse=True)
+        values = [{'count': count, 'qid': f'Q{value}'}
+                  for _, count, value in hits[:facet_limit]]
+        facet_list[f'P{predicate_id}'] = values
+        subject_qids.update(i['qid'] for i in values)
+
+    print(len(subject_qids))
+    labels = get_labels_db(subject_qids)
+
+    for values in facet_list.values():
+        for v in values:
+            v['label'] = labels[v['qid']]
+
+    return facet_list
+
 @app.route('/browse')
 def browse_page():
+    page_size = 45
     params = get_artwork_params()
 
     if not params:
         return browse_index()
 
     flat = '_'.join(f'{pid}={qid}' for pid, qid in params)
-
-    item_labels = get_labels(qid for pid, qid in params)
-
-    g.title = ' / '.join(find_more_props[pid] + ': ' + item_labels[qid]
+    item_labels = get_labels_db(qid for pid, qid in params)
+    g.title = ' / '.join(find_more_props[pid] + ': ' + (item_labels.get(qid) or qid)
                          for pid, qid in params)
 
-    bindings = filter_artwork(params)
+    q_items = get_db_items(params)
+    facets = get_db_facets(params)
 
-    try:
-        facets = get_facets(params)
-    except wdqs.QueryError:
-        facets = {}
-
-
-    page_size = 45
-
-    item_map = wdqs.build_browse_item_map(bindings)
-
-    all_items = []
-    for item in item_map.values():
-        if len(item['image_filename']) != 1:
-            continue
-        item['image_filename'] = item['image_filename'][0]
-        all_items.append(item)
+    all_items = q_items.all()
 
     page = utils.get_int_arg('page') or 1
-    pager = Pagination(page, page_size, len(all_items))
+    total = q_items.count()
+    pager = Pagination(page, page_size, total)
 
     items = pager.slice(all_items)
 
@@ -747,29 +816,38 @@ def browse_page():
     detail = get_image_detail_with_cache(items, cache_name)
     cache_refreshed = False
 
+    linked_qids = {qid for pid, qid in params}
     for item in items:
-        item['url'] = url_for('item_page', item_id=item['item_id'])
-        image_filename = item['image_filename']
+        artist_qid = item.artist
+        if artist_qid:
+            linked_qids.add(artist_qid)
+        for prop in 'P31', 'P180':
+            linked_qids.update(item.linked_qids(prop))
+
+    linked_labels = get_labels_db(linked_qids)
+
+    for item in items:
+        image_filename = item.image_filename()
         if not cache_refreshed and image_filename not in detail:
             detail = get_image_detail_with_cache(items, cache_name, refresh=True)
             cache_refreshed = True
-        item['image'] = detail[image_filename]
+        item.image = detail[image_filename]
 
-    catalog_url = url_for('catalog_page', **dict(params))
-
-    return render_template('find_more.html',
-                           facets=facets,
-                           prop_labels=find_more_props,
+    return render_template('new_find_more.html',
+                           page=page,
                            label=g.title,
                            pager=pager,
-                           params=params,
-                           item_map=item_map,
-                           catalog_url=catalog_url,
-                           page=page,
+                           prop_labels=find_more_props,
                            labels=find_more_props,
-                           bindings=bindings,
-                           total=len(item_map),
-                           items=items)
+                           linked_labels=linked_labels,
+                           items=items,
+                           total=total,
+                           params=params,
+                           facets=facets)
+
+    return jsonify(params=params,
+                   items=items.count(),
+                   facets=facets)
 
 @app.route('/find_more.json')
 def find_more_json():
