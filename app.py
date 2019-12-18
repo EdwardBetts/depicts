@@ -213,6 +213,7 @@ def property_query_page(property_id):
 
 @app.route('/')
 def start():
+    return redirect(url_for('browse_page'))
     return random_artwork()
     username = wikidata_oauth.get_username()
     username = None
