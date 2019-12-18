@@ -187,10 +187,17 @@ def property_query_page(property_id):
                          .group_by(Triple.object_id)
                          .order_by(desc('c')))
 
-    labels = get_labels_db({f'Q{object_id}' for object_id, c in q})
+    page = utils.get_int_arg('page') or 1
+    total = q.count()
+    page_size = 50
+    pager = Pagination(page, page_size, total)
+
+    page_hits = pager.slice(q)
+
+    labels = get_labels_db({f'Q{object_id}' for object_id, c in page_hits})
 
     hits = []
-    for object_id, count in q:
+    for object_id, count in page_hits:
         qid = f'Q{object_id}'
         hits.append({'qid': qid,
                      'label': labels.get(qid) or '[item missing]',
@@ -200,6 +207,8 @@ def property_query_page(property_id):
                            label=g.title,
                            order=('name' if sort_by_name else 'count'),
                            pid=pid,
+                           page=page,
+                           pager=pager,
                            hits=hits)
 
 @app.route('/')
@@ -833,7 +842,7 @@ def browse_page():
             cache_refreshed = True
         item.image = detail[image_filename]
 
-    return render_template('new_find_more.html',
+    return render_template('find_more.html',
                            page=page,
                            label=g.title,
                            pager=pager,

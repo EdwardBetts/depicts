@@ -1,3 +1,4 @@
+{% from "macro.html" import render_pagination %}
 {% extends "base.html" %}
 
 {% block title %}{{ label }}{% endblock %}
@@ -16,7 +17,9 @@
   {% endif %}
   </p>
 
-  <p>Total: {{ hits | length }}</p>
+  <p>Total: {{ '{:,d}'.format(pager.total_count) }}</p>
+
+  {{ render_pagination(pager) }}
 
   <ul>
   {% for hit in hits %}
@@ -31,6 +34,9 @@
     </li>
   {% endfor %}
   </ul>
+
+  {{ render_pagination(pager) }}
+
 </div>
 
 {% endblock %}
