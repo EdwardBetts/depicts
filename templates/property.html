@@ -9,6 +9,7 @@
 
   <p><a href="{{ url_for('browse_page') }}">back to index</a></p>
 
+  {#
   <p>Sort order:
   {% if order == 'name' %}
     <b>name</b> or <a href="{{ set_url_args(sort='count') }}">count</a>
@@ -16,6 +17,7 @@
     <a href="{{ set_url_args(sort='name') }}">name</a> or <b>count</b>
   {% endif %}
   </p>
+  #}
 
   <p>Total: {{ '{:,d}'.format(pager.total_count) }}</p>
 

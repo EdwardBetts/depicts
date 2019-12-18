@@ -189,7 +189,7 @@ def property_query_page(property_id):
 
     page = utils.get_int_arg('page') or 1
     total = q.count()
-    page_size = 50
+    page_size = 100
     pager = Pagination(page, page_size, total)
 
     page_hits = pager.slice(q)
