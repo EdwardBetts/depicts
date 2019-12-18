@@ -1,5 +1,5 @@
 from . import utils, wdqs, mediawiki
-import nltk
+# import nltk
 import re
 
 re_from_article = re.compile(r'(?:portrays|depicts|depictions of|it shows) (.+?)\.', re.I)
