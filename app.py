@@ -767,7 +767,7 @@ def get_db_items(params):
 def get_db_facets(params):
     t = aliased(Triple)
     q = database.session.query(t.predicate_id, func.count().label('count'), t.object_id)
-    facet_limit = 15
+    facet_limit = 18
 
     for pid, qid in params:
         q = (q.join(Triple, t.subject_id == Triple.subject_id, aliased=True)
