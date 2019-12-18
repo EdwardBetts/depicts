@@ -29,7 +29,7 @@ def image_detail(filenames, thumbheight=None, thumbwidth=None):
 
         for image in r.json()['query']['pages']:
             filename = utils.drop_start(image['title'], 'File:')
-            images[filename] = image['imageinfo'][0]
+            images[filename] = image['imageinfo'][0] if 'imageinfo' in image else None
 
     return images
 
