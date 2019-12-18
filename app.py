@@ -757,7 +757,7 @@ def browse_facets():
 
 def get_db_items(params):
     ''' Get items for browse page based on criteria. '''
-    q = Item.query
+    q = Item.query.filter_by(is_artwork=True)
     for pid, qid in params:
         q = (q.join(Triple, Item.item_id == Triple.subject_id, aliased=True)
               .filter(Triple.predicate_id == pid[1:], Triple.object_id == qid[1:]))
@@ -820,7 +820,7 @@ def browse_page():
     total = q_items.count()
     pager = Pagination(page, page_size, total)
 
-    items = pager.slice(all_items)
+    items = [item for item in pager.slice(all_items) if item.image_filename()]
 
     cache_name = f'{flat}_{page}_{page_size}'
     detail = get_image_detail_with_cache(items, cache_name)
