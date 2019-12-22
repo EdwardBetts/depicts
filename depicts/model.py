@@ -105,9 +105,13 @@ class Item(Base):
 
 class Triple(Base):
     __tablename__ = 'triple'
-    subject_id = Column(Integer, primary_key=True)
+    subject_id = Column(Integer,
+                        ForeignKey('item.item_id'),
+                        primary_key=True)
     predicate_id = Column(Integer, primary_key=True, index=True)
     object_id = Column(Integer, primary_key=True, index=True)
+
+    subject = relationship('Item', backref='triples')
 
 class HumanItem(Base):
     __tablename__ = 'human'
