@@ -24,8 +24,10 @@ def api_call(params, api_url=wikidata_url):
     r = requests.get(api_url, params=call_params, timeout=5)
     return r
 
-def get_entity(qid):
-    json_data = api_call({'action': 'wbgetentities', 'ids': qid}).json()
+def get_entity(qid, redirects=False):
+    json_data = api_call({'action': 'wbgetentities',
+                          'ids': qid,
+                          'redirects': {True: 'yes', False: 'no'}[redirects]}).json()
 
     try:
         entity = list(json_data['entities'].values())[0]
@@ -162,3 +164,12 @@ def get_categories(titles, site):
             continue
         title_and_cats.append((i['title'], cats))
     return title_and_cats
+
+def get_history(title, site):
+    params = {
+        'prop': 'revisions',
+        'rvlimit': 'max',
+        'rvprop': 'timestamp|user|comment|ids|content',
+        'rvslots': 'main',
+    }
+    return mediawiki_query([title], params, site)
