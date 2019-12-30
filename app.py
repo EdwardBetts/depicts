@@ -213,31 +213,24 @@ def property_query_page(property_id):
 
 @app.route('/')
 def start():
-    return redirect(url_for('browse_page'))
     return random_artwork()
-    username = wikidata_oauth.get_username()
-    username = None
-    return render_template('start.html', username=username)
 
 @app.route('/next')
 def random_artwork():
-    rows = wdqs.run_from_template_with_cache('query/artwork_no_depicts.sparql')
-    has_depicts = True
-    while has_depicts:
-        item_id = wdqs.row_id(random.choice(rows))
-        if Item.query.get(item_id):
-            continue
-        entity = mediawiki.get_entity_with_cache(f'Q{item_id}', refresh=True)
-        en_label = wikibase.get_en_label(entity)
-        if en_label and en_label.startswith('Page from '):
-            # example: Q60467422
-            # title: Page from Tales of a Parrot (Tuti-nama): text page
-            # this is not a painting
-            continue
-        has_depicts = 'P180' in entity['claims']
+    found = None
+    while True:
+        q = Item.query.filter_by(is_artwork=True).order_by(func.random()).limit(30)
+        for item in q:
+            has_depicts = 'P180' in item.entity['claims']
+            if has_depicts:
+                continue
+            found = item
+            break
+        if found:
+            break
 
-    session[f'Q{item_id}'] = 'from redirect'
-    return redirect(url_for('item_page', item_id=item_id))
+    session[found.qid] = 'from redirect'
+    return redirect(url_for('item_page', item_id=found.item_id))
 
 @app.route('/oauth/start')
 def start_oauth():
