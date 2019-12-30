@@ -26,9 +26,7 @@ class DepictsItem(Base):
     item_id = Column(Integer, primary_key=True, autoincrement=False)
     label = Column(String)
     description = Column(String)
-    commons = Column(String)
     count = Column(Integer)
-    entity = Column(postgresql.JSON)
     qid = column_property('Q' + cast(item_id, String))
     db_alt_labels = relationship('DepictsItemAltLabel',
                                  collection_class=set,
@@ -95,7 +93,6 @@ class Item(Base):
         return [v['mainsnak']['datavalue']['value']['id']
                 for v in values
                 if 'datavalue' in v['mainsnak']]
-
 
     @property
     def date(self):
