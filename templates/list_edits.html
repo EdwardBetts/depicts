@@ -1,15 +1,18 @@
+{% from "macro.html" import render_pagination %}
 {% extends "base.html" %}
 
 {% block content %}
 <div class="p-2">
 
-  <p>This tool has been used to add a total of {{ edits.count() }} depicts statements.</p>
+  <p>This tool has been used to add a total of {{ '{:,d}'.format(pager.total_count) }} depicts statements.</p>
 
-  <p>{{ user_count }} users have tried this tool.</p>
+  <p>{{ '{:,d}'.format(user_count) }} users have tried this tool.</p>
 
-  <p>{{ item_count }} artworks have been cataloged.</p>
+  <p>{{ '{:,d}'.format(item_count) }} artworks have been cataloged.</p>
 
-  <table class="table w-auto">
+  {{ render_pagination(pager) }}
+
+  <table class="table">
     <thead>
       <tr>
         <th>username</th>
@@ -28,12 +31,13 @@
       </td>
       <td><a href="https://www.wikidata.org/wiki/{{ edit.depicts_qid }}">{{ edit.depicts.label }}</a>
           ({{ edit.depicts_qid }})</td>
-      <td>{{ edit.timestamp.strftime('%Y %b %d %H:%M') }}</td>
+      <td class="text-nowrap">{{ edit.timestamp.strftime('%Y %b %d %H:%M') }}</td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
 
+  {{ render_pagination(pager) }}
 
 </div>
 

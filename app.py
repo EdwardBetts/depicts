@@ -503,7 +503,9 @@ def get_other(entity):
 
 @app.route("/edits")
 def list_edits():
-    edit_list = Edit.query.order_by(Edit.timestamp.desc())
+    q = Edit.query.order_by(Edit.timestamp.desc())
+    page = utils.get_int_arg('page') or 1
+    pager = Pagination(page, 100, q.count())
 
     item_count = (database.session
                           .query(func.count(distinct(Edit.artwork_id)))
@@ -514,8 +516,8 @@ def list_edits():
                           .scalar())
 
     return render_template('list_edits.html',
-                           edits=Edit.query,
-                           edit_list=edit_list,
+                           pager=pager,
+                           edit_list=pager.slice(q),
                            item_count=item_count,
                            user_count=user_count)
 
