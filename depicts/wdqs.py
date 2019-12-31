@@ -202,3 +202,9 @@ def quote_list(l):
 def url_list(l):
     no_dups = list(dict.fromkeys(l))  # remove duplicates
     return ' '.join(f'(<{s}>)' for s in no_dups)
+
+def is_artificial_physical_object(qid):
+    bindings = run_from_template_with_cache('query/item_type.sparql', qid=qid)
+    types = {row_id(row, field='item') for row in bindings}
+    # Q8205328 == artificial physical object
+    return 8205328 in types
