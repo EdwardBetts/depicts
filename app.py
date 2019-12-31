@@ -377,17 +377,39 @@ def item_page(item_id):
 
     people = human.from_name(label) if label else None
 
+    label_languages = label_and_language['languages'] if label_and_language else []
+    show_translation_links = all(lang.code != 'en' for lang in label_languages)
+
     artwork_item = Item.query.get(item_id)
     if artwork_item is None:
-        artwork_item = Item(item_id=item_id, label=label, entity=entity)
+
+        if not wdqs.is_artificial_physical_object(qid):
+            return render_template('not_artwork.html',
+                           qid=qid,
+                           item_id=item_id,
+                           item=item,
+                           labels=find_more_props,
+                           entity=item.entity,
+                           username=g.user,
+                           label=label,
+                           label_languages=label_languages,
+                           show_translation_links=show_translation_links,
+                           image=image,
+                           other=other,
+                           title=item.display_title)
+
+        modified = datetime.strptime(entity['modified'], "%Y-%m-%dT%H:%M:%SZ")
+
+        artwork_item = Item(item_id=item_id,
+                            entity=entity,
+                            lastrevid=entity['lastrevid'],
+                            modified=modified)
         database.session.add(artwork_item)
 
     catalog = wd_catalog.get_catalog_from_artwork(entity)
     if not catalog.get('institution'):
         catalog['institution'] = get_institution(entity, other)
 
-    label_languages = label_and_language['languages'] if label_and_language else []
-    show_translation_links = all(lang.code != 'en' for lang in label_languages)
     return render_template('item.html',
                            qid=qid,
                            item_id=item_id,
