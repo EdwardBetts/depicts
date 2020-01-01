@@ -20,7 +20,6 @@ import hashlib
 import json
 import os
 import locale
-import random
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0'
