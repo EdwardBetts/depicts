@@ -5,7 +5,6 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import column_property, relationship, synonym
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.dialects import postgresql
 from urllib.parse import quote
