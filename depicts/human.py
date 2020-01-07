@@ -39,6 +39,8 @@ def from_name(name):
 
     found = []
     for entity in mediawiki.get_entities_with_cache(qids, props='labels|descriptions'):
+        if 'redirects' in entity:
+            continue
         qid = entity['id']
         item = lookup[qid]
         i = {
