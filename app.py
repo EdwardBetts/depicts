@@ -686,12 +686,16 @@ def catalog_page():
 
     qids = [f'Q{item_id}' for item_id in sorted(item_ids)]
 
+    items = [Item.query.get(item_id) for item_id in item_ids]
+
     entities = mediawiki.get_entities_with_cache(qids)
 
     items = []
     other_items = set()
     for entity in entities:
         other_items.update(build_other_set(entity))
+        continue
+
         item = {
             'label': wikibase.get_entity_label(entity),
             'qid': entity['id'],
