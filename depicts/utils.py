@@ -84,7 +84,10 @@ def format_time(time_value, precision):
         # can't be represented as python datetime
         year = int(time_value[:time_value.find('-', 1)])
     else:
-        t = datetime.strptime(time_value[1:], "%Y-%m-%dT%H:%M:%SZ")
+        try:
+            t = datetime.strptime(time_value[1:], "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            return time_value
         year = t.year
 
     if precision == 9:
