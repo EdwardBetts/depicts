@@ -9,7 +9,11 @@
 
 <h1>Software error: {{ tb.exception_type }}</h1>
 <div>
-  <p>{{ tb.exception }}</p>
+  <pre>{{ tb.exception }}</pre>
+
+<p>Error in function "{{ tb.frames[-1].function_name }}":
+   {{ last_frame_args | pprint }}</p>
+
 </div>
 
 {% set body %}

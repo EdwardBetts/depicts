@@ -15,6 +15,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import desc
 from collections import defaultdict
 from datetime import datetime
+import inspect
 import itertools
 import hashlib
 import json
@@ -79,7 +80,10 @@ def shutdown_session(exception=None):
 @app.errorhandler(InternalServerError)
 def exception_handler(e):
     tb = get_current_traceback()
-    return render_template('show_error.html', tb=tb), 500
+    last_frame_args = inspect.getargs(tb.frames[-1].code)
+    return render_template('show_error.html',
+                           tb=tb,
+                           last_frame_args=last_frame_args), 500
 
 @app.template_global()
 def set_url_args(endpoint=None, **new_args):
