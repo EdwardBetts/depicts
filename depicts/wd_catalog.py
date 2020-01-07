@@ -163,6 +163,9 @@ def check_catalog(entity, catalog):
         if property_id == 'P350':
             continue  # RKDimages ID
         value = wikibase.first_datavalue(entity, property_id)
+        # identifier can be 'no value', example: Q26754456
+        if value is None:
+            continue
         detail = lookup(property_id, value)
         try:
             html = get_catalog_page(property_id, value)
@@ -181,6 +184,9 @@ def get_catalog_from_artwork(entity):
     catalog_detail = []
     for property_id in sorted(catalog_ids):
         value = wikibase.first_datavalue(entity, property_id)
+        # identifier can be 'no value', example: Q26754456
+        if value is None:
+            continue
         detail = lookup(property_id, value)
         catalog_detail.append(detail)
 
