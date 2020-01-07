@@ -724,7 +724,7 @@ def catalog_page():
                            title=title)
 
 def get_image_detail_with_cache(items, cache_name, thumbwidth=None, refresh=False):
-    filenames = [cur['image_filename'] for cur in items]
+    filenames = [cur.image_filename() for cur in items]
 
     if thumbwidth is None:
         thumbwidth = app.config['THUMBWIDTH']
