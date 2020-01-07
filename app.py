@@ -154,7 +154,6 @@ def save(item_id):
         reply = r.json()
         if 'error' in reply:
             return 'error:' + r.text
-        print(r.text)
         saved = r.json()
         lastrevid = saved['pageinfo']['lastrevid']
         assert saved['success'] == 1
@@ -468,9 +467,7 @@ def get_labels(keys, name=None):
         if isinstance(from_cache, dict) and from_cache.get('keys') == keys:
             labels = from_cache['labels']
     if not labels:
-        print(len(keys))
         for num, cur in enumerate(utils.chunk(keys, 50)):
-            print(f'{num * 50} / {len(keys)}')
             labels += mediawiki.get_entities(cur, props='labels')
 
         json.dump({'keys': keys, 'labels': labels},
@@ -489,10 +486,8 @@ def get_labels_db(keys):
         else:
             missing.add(qid)
 
-    print(len(missing))
     page_size = 50
     for num, cur in enumerate(utils.chunk(missing, page_size)):
-        print(f'{num * page_size} / {len(missing)}')
         for entity in mediawiki.get_entities(cur):
             if 'redirects' in entity:
                 continue
@@ -809,7 +804,6 @@ def get_db_facets(params):
         facet_list[f'P{predicate_id}'] = values
         subject_qids.update(i['qid'] for i in values)
 
-    print(len(subject_qids))
     labels = get_labels_db(subject_qids)
 
     for values in facet_list.values():
