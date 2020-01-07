@@ -11,9 +11,10 @@
 <div>
   <pre>{{ tb.exception }}</pre>
 
-<p>Error in function "{{ tb.frames[-1].function_name }}":
-   {{ last_frame_args | pprint }}</p>
-
+<p>Error in function "{{ tb.frames[-1].function_name }}"<br>
+  {{ last_frame_args | pprint }}<br>
+  locals: {{ last_frame.locals | pprint }}
+<p>
 </div>
 
 {% set body %}
