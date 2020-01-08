@@ -1,6 +1,6 @@
 from . import mediawiki, utils
 
-commons_url = 'https://www.wikidata.org/w/api.php'
+commons_url = 'https://commons.wikimedia.org/w/api.php'
 page_size = 50
 
 def image_detail(filenames, thumbheight=None, thumbwidth=None):
