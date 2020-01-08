@@ -15,6 +15,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import desc
 from collections import defaultdict
 from datetime import datetime
+import requests.exceptions
 import inspect
 import itertools
 import hashlib
@@ -489,23 +490,26 @@ def get_labels_db(keys):
             missing.add(qid)
 
     page_size = 50
-    for num, cur in enumerate(utils.chunk(missing, page_size)):
-        for entity in mediawiki.get_entities(cur):
-            if 'redirects' in entity:
-                continue
+    try:
+        for cur in utils.chunk(missing, page_size):
+            for entity in mediawiki.get_entities(cur):
+                if 'redirects' in entity:
+                    continue
 
-            qid = entity['id']
+                qid = entity['id']
 
-            modified = datetime.strptime(entity['modified'], "%Y-%m-%dT%H:%M:%SZ")
-            # FIXME: check if the item is an artwork and set is_artwork correctly
-            item = Item(item_id=qid[1:],
-                        entity=entity,
-                        lastrevid=entity['lastrevid'],
-                        modified=modified,
-                        is_artwork=False)
-            database.session.add(item)
-            labels[qid] = item.label
-        database.session.commit()
+                modified = datetime.strptime(entity['modified'], "%Y-%m-%dT%H:%M:%SZ")
+                # FIXME: check if the item is an artwork and set is_artwork correctly
+                item = Item(item_id=qid[1:],
+                            entity=entity,
+                            lastrevid=entity['lastrevid'],
+                            modified=modified,
+                            is_artwork=False)
+                database.session.add(item)
+                labels[qid] = item.label
+            database.session.commit()
+    except requests.exceptions.ReadTimeout:
+        pass
 
     return labels
 
@@ -734,11 +738,15 @@ def get_image_detail_with_cache(items, cache_name, thumbwidth=None, refresh=Fals
         thumbwidth = app.config['THUMBWIDTH']
 
     filename = f'cache/{cache_name}_images.json'
-    if not refresh and os.path.exists(filename):
+    cache_exists = os.path.exists(filename)
+    if not refresh and cache_exists:
         detail = json.load(open(filename))
     else:
-        detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
-        json.dump(detail, open(filename, 'w'), indent=2)
+        try:
+            detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
+            json.dump(detail, open(filename, 'w'), indent=2)
+        except requests.exceptions.ReadTimeout:
+            detail = json.load(open(filename)) if cache_exists else {}
 
     return detail
 
@@ -814,7 +822,7 @@ def get_db_facets(params):
 
     for values in facet_list.values():
         for v in values:
-            v['label'] = labels[v['qid']]
+            v['label'] = labels.get(v['qid'])
 
     return facet_list
 
@@ -861,7 +869,7 @@ def browse_page():
         if not cache_refreshed and image_filename not in detail:
             detail = get_image_detail_with_cache(items, cache_name, refresh=True)
             cache_refreshed = True
-        item.image = detail[image_filename]
+        item.image = detail.get(image_filename)
 
     return render_template('find_more.html',
                            page=page,
