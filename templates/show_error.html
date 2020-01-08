@@ -23,7 +23,7 @@ URL: {{ request.url }}
 <h2 class="traceback">Traceback <em>(most recent call last)</em></h2>
 {{ tb.render_summary(include_title=False) | safe }}
 
-<p>Error in function "{{ tb.frames[-1].function_name }}": {{ last_frame_args | pprint }}</p>
+<p>Error in function "{{ last_frame.function_name }}": {{ last_frame_args | pprint }}</p>
 <pre>{{ last_frame.locals | pprint }}</pre>
 </div>
 
