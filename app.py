@@ -80,7 +80,7 @@ def shutdown_session(exception=None):
 @app.errorhandler(InternalServerError)
 def exception_handler(e):
     tb = get_current_traceback()
-    last_frame = tb.frames[-1]
+    last_frame = next(frame for frame in reversed(tb.frames) if not frame.is_library)
     last_frame_args = inspect.getargs(last_frame.code)
     return render_template('show_error.html',
                            tb=tb,
