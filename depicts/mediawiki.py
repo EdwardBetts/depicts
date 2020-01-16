@@ -2,7 +2,6 @@ import requests
 import os
 import json
 import hashlib
-from .category import Category
 from . import utils
 
 wikidata_url = 'https://www.wikidata.org/w/api.php'
@@ -144,26 +143,6 @@ def get_content_and_categories(title, site):
 
 def host_from_site(site):
     return hosts[site]
-
-def process_cats(cats, site):
-    return [Category(cat['title'], site) for cat in cats]
-
-def get_categories(titles, site):
-    params = {
-        'prop': 'categories',
-        'clshow': '!hidden',
-        'cllimit': 'max',
-    }
-    from_wiki = mediawiki_query(titles, params, site)
-    title_and_cats = []
-    for i in from_wiki:
-        if 'categories' not in i:
-            continue
-        cats = process_cats(i['categories'], site)
-        if not cats:
-            continue
-        title_and_cats.append((i['title'], cats))
-    return title_and_cats
 
 def get_history(title, site):
     params = {
