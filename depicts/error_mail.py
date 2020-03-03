@@ -35,7 +35,8 @@ def setup_error_mail(app):
     mail_handler = MatcherSMTPHandler(app.config['SMTP_HOST'],
                                       app.config['MAIL_FROM'],
                                       app.config['ADMINS'],
-                                      app.name + ' error')
+                                      app.name + ' error',
+                                      timeout=30)
     mail_handler.setFormatter(formatter)
 
     mail_handler.setLevel(logging.ERROR)
