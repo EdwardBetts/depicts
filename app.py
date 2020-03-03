@@ -134,8 +134,7 @@ def save(item_id):
     artwork_item = Item.query.get(item_id)
     if artwork_item is None:
         artwork_entity = mediawiki.get_entity_with_cache(f'Q{item_id}')
-        label = wikibase.get_entity_label(artwork_entity)
-        artwork_item = Item(item_id=item_id, label=label, entity=artwork_entity)
+        artwork_item = Item(item_id=item_id, entity=artwork_entity)
         database.session.add(artwork_item)
         database.session.commit()
 
