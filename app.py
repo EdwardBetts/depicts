@@ -515,11 +515,10 @@ def get_labels_db(keys):
 def build_other_set(entity):
     other_items = set()
     for key in find_more_props.keys():
-        if key not in entity['claims']:
-            continue
-        for claim in entity['claims'][key]:
-            if 'datavalue' in claim['mainsnak']:
-                other_items.add(claim['mainsnak']['datavalue']['value']['id'])
+        for claim in entity['claims'].get(key, []):
+            if 'datavalue' not in claim['mainsnak']:
+                continue
+            other_items.add(claim['mainsnak']['datavalue']['value']['id'])
     return other_items
 
 def get_other(entity):
