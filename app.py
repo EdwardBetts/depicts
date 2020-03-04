@@ -469,7 +469,7 @@ def get_labels(keys, name=None):
         if isinstance(from_cache, dict) and from_cache.get('keys') == keys:
             labels = from_cache['labels']
     if not labels:
-        for num, cur in enumerate(utils.chunk(keys, 50)):
+        for cur in utils.chunk(keys, 50):
             labels += mediawiki.get_entities(cur, props='labels')
 
         json.dump({'keys': keys, 'labels': labels},
