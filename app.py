@@ -312,9 +312,11 @@ def create_claim(artwork_id, depicts_id, token):
 
 def image_with_cache(qid, image_filename, width):
     filename = f'cache/{qid}_{width}_image.json'
-    if os.path.exists(filename):
-        detail = json.load(open(filename))
-    else:
+    detail = json.load(open(filename)) if os.path.exists(filename) else {}
+
+    # The image associated with an item can change.
+    # If that happens the detail in the cache will be for the wrong file.
+    if not detail or image_filename not in detail:
         detail = commons.image_detail([image_filename], thumbwidth=width)
         json.dump(detail, open(filename, 'w'), indent=2)
 
