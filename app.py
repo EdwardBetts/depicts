@@ -349,11 +349,11 @@ def get_institution(entity, other):
     if 'P276' in entity['claims']:
         location = wikibase.first_datavalue(entity, 'P276')
         if location:
-            return other[location['id']]
+            return other.get(location['id'])
     if 'P195' in entity['claims']:
         collection = wikibase.first_datavalue(entity, 'P195')
         if collection:
-            return other[collection['id']]
+            return other.get(collection['id'])
 
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
