@@ -17,10 +17,12 @@
 <body>
   {% block nav %}{{ navbar() }}{% endblock %}
 
-<div class="p-2">
-  {{ local_block_alert() }}
-  {{ global_block_alert() }}
-</div>
+  {% if config.SHOW_BLOCK_ALERT %}
+  <div class="p-2">
+    {{ local_block_alert() }}
+    {{ global_block_alert() }}
+  </div>
+  {% endif %}
 
   {% block content %}{% endblock %}
 

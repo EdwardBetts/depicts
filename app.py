@@ -113,8 +113,9 @@ def init_profile():
 def global_user():
     g.user = wikidata_oauth.get_username()
 
-@app.before_request
-def get_blocks():
+def check_for_blocks():
+    if hasattr(g, 'server_ip'):  # already done
+        return
     hostname = app.config.get('HOSTNAME')
     if not hostname:
         return
@@ -126,6 +127,11 @@ def get_blocks():
                                              bgip=g.server_ip)
     except Exception:
         pass
+
+@app.before_request
+def get_blocks():
+    if app.config.get('SHOW_BLOCK_ALERT') is not False:
+        check_for_blocks()
 
 @app.route('/find_more_setting')
 def flip_find_more():
@@ -1075,6 +1081,7 @@ def wikidata_query_list():
 
 @app.route('/report/blocks')
 def server_block_report():
+    check_for_blocks()
     return render_template('block_report.html')
 
 
