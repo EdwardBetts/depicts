@@ -2,7 +2,7 @@
 
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, artwork, database,
-                     wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit)
+                     wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit, mail)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, Item,
                            Language, WikidataQuery, Triple)
@@ -15,6 +15,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import desc
 from collections import defaultdict
 from datetime import datetime
+import simplejson.errors
 import requests.exceptions
 import inspect
 import itertools
@@ -174,7 +175,12 @@ def save(item_id):
             continue
 
         r = create_claim(item_id, depicts_id, token)
-        reply = r.json()
+        try:
+            reply = r.json()
+        except simplejson.errors.JSONDecodeError:
+            mail.send_mail('depicts save error', r.text)
+            raise
+
         if 'error' in reply:
             return 'error:' + r.text
         saved = r.json()
