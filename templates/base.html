@@ -12,9 +12,16 @@
   {% block style %}{% endblock %}
 </head>
 {% from "navbar.html" import navbar with context %}
+{% from "block_alert.html" import local_block_alert, global_block_alert with context %}
 
 <body>
   {% block nav %}{{ navbar() }}{% endblock %}
+
+<div class="p-2">
+  {{ local_block_alert() }}
+  {{ global_block_alert() }}
+</div>
+
   {% block content %}{% endblock %}
 
   <script src="{{ url_for('static', filename='javascript/jquery/jquery.min.js') }}"></script>

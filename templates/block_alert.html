@@ -1,0 +1,25 @@
+{% macro local_block_alert() %}
+{% if g.local_blocks %}
+<div class="alert alert-danger" role="alert">
+  <h4 class="alert-heading">Wikidata IP block preventing edits</h4>
+  <p>Editing is currently unavailable due to a block of the server that hosts this tool.</p>
+  {% if request.endpoint != 'server_block_report' %}
+  <hr>
+  <p class="mb-0">See the <a href="{{ url_for('server_block_report') }}">block report</a> for more details.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro global_block_alert() %}
+{% if g.global_blocks %}
+<div class="alert alert-danger" role="alert">
+  <h4 class="alert-heading">Wikimedia global IP block preventing edits</h4>
+  <p>Editing is currently unavailable due to a block of the server that hosts this tool.</p>
+  {% if request.endpoint != 'server_block_report' %}
+  <hr>
+  <p class="mb-0">See the <a href="{{ url_for('server_block_report') }}">block report</a> for more details.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endmacro %}

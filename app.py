@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import locale
+import socket
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0'
@@ -111,6 +112,20 @@ def init_profile():
 @app.before_request
 def global_user():
     g.user = wikidata_oauth.get_username()
+
+@app.before_request
+def get_blocks():
+    hostname = app.config.get('HOSTNAME')
+    if not hostname:
+        return
+    g.server_ip = socket.gethostbyname(hostname)
+    try:
+        g.local_blocks = mediawiki.get_list('blocks',
+                                            bkip=g.server_ip)
+        g.global_blocks = mediawiki.get_list('globalblocks',
+                                             bgip=g.server_ip)
+    except Exception:
+        pass
 
 @app.route('/find_more_setting')
 def flip_find_more():
@@ -1057,6 +1072,10 @@ def missing_image_report():
 def wikidata_query_list():
     q = WikidataQuery.query.order_by(WikidataQuery.start_time.desc())
     return render_template('query_list.html', q=q)
+
+@app.route('/report/blocks')
+def server_block_report():
+    return render_template('block_report.html')
 
 
 if __name__ == "__main__":

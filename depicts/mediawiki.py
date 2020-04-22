@@ -23,6 +23,10 @@ def api_call(params, api_url=wikidata_url):
     r = requests.get(api_url, params=call_params, timeout=5)
     return r
 
+def get_list(list_name, **params):
+    r = api_call({'action': 'query', 'list': list_name, **params})
+    return r.json()['query'][list_name]
+
 def get_entity(qid, redirects=False):
     json_data = api_call({'action': 'wbgetentities',
                           'ids': qid,

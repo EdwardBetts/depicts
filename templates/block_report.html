@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% macro block_list(blocks) %}
+{% for i in blocks %}
+  <dl class="row">
+  {% for key, value in i.items() %}
+    <dt class="col-sm-1">{{ key }}</dt>
+    <dd class="col-sm-11">{{ value }}</dt>
+  {% endfor %}
+  </dl>
+{% endfor %}
+{% endmacro %}
+
+{% block content %}
+<div class="p-2">
+  <h1>Block report</h1>
+
+  <p>This report shows IP blocks on Wikidata that will prevent changes being saved.</p>
+
+  <ul>
+    <li>Server hostname: {{ config.HOSTNAME }}</li>
+    <li>Server IP: {{ g.server_ip }}</li>
+  </ul>
+
+  <h4>Local blocks on Wikidata</h4>
+  {% set url = 'https://www.wikidata.org/wiki/Special:BlockList?wpTarget=' + g.server_ip %}
+  <p><a href="{{ url }}">Check block list on Wikidata</a></p>
+
+  {% if g.local_blocks %}
+    {{ block_list(g.local_blocks) }}
+  {% else %}
+    <p>There are no local blocks for the server IP address on Wikidata</p>
+  {% endif %}
+
+  <h4>Global blocks</h4>
+  {% set url = 'https://www.wikidata.org/wiki/Special:GlobalBlockList/' + g.server_ip %}
+  <p><a href="{{ url }}">Check global block list</a></p>
+
+  {% if g.global_blocks %}
+    {{ block_list(g.global_blocks) }}
+  {% else %}
+    <p>There are no global blocks for the server IP address</p>
+  {% endif %}
+
+</div>
+
+{% endblock %}
