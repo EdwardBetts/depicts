@@ -2,7 +2,8 @@
 
 from flask import Flask, render_template, url_for, redirect, request, g, jsonify, session
 from depicts import (utils, wdqs, commons, mediawiki, artwork, database,
-                     wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit, mail)
+                     wd_catalog, human, wikibase, wikidata_oauth, wikidata_edit, mail,
+                     fixtures)
 from depicts.pager import Pagination, init_pager
 from depicts.model import (DepictsItem, DepictsItemAltLabel, Edit, Item,
                            Language, WikidataQuery, Triple)
@@ -181,8 +182,11 @@ def save(item_id):
             mail.send_mail('depicts save error', r.text)
             raise
 
-        if 'error' in reply:
-            return 'error:' + r.text
+        save_error = reply.get('error')
+        if save_error:
+            mail.send_mail('depicts save error', r.text)
+            return render_template('save_error.html', error=save_error)
+
         saved = r.json()
         lastrevid = saved['pageinfo']['lastrevid']
         assert saved['success'] == 1
@@ -1089,6 +1093,11 @@ def wikidata_query_list():
 def server_block_report():
     check_for_blocks()
     return render_template('block_report.html')
+
+@app.route('/fixture/save_error')
+def save_error_fixture():
+    error = fixtures.save_error()['error']
+    return render_template('save_error.html', error=error)
 
 
 if __name__ == "__main__":
