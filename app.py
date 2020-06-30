@@ -400,6 +400,7 @@ def get_institution(entity, other):
 @app.route("/item/Q<int:item_id>")
 def item_page(item_id):
     qid = f'Q{item_id}'
+    g.qid = qid
     item = artwork.Artwork(qid)
     from_redirect = qid in session and session.pop(qid) == 'from redirect'
     entity = mediawiki.get_entity_with_cache(qid, refresh=not from_redirect)
@@ -423,6 +424,7 @@ def item_page(item_id):
         label = label_and_language['label']
     else:
         label = None
+    g.label = label
     other = get_other(item.entity)
 
     people = human.from_name(label) if label else None
