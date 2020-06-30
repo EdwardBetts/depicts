@@ -206,7 +206,8 @@ def get_catalog_from_artwork(entity):
         check_catalog(entity, catalog)
     except (requests.exceptions.ReadTimeout,
             requests.exceptions.ConnectTimeout,
-            requests.exceptions.ConnectionError):
+            requests.exceptions.ConnectionError,
+            requests.exceptions.TooManyRedirects):
         pass
 
     return catalog
