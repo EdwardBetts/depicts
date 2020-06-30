@@ -18,17 +18,22 @@ def get_html(saam_id):
 
 def parse_html(html):
     root = lxml.html.fromstring(html)
-    ld = json.loads(root.findtext('.//script[@type="application/ld+json"]'))
+    ld_json = root.findtext('.//script[@type="application/ld+json"]')
+    if ld_json is None:
+        return {'ld': {}, 'keywords': []}
+    ld = json.loads(ld_json)
 
     ul = root.find('.//ul[@class="ontology-list"]')
     if ul is None:
-        return {'ld': ld, 'keywords': []}
+        return
     assert ul.tag == 'ul'
     keywords = [li.text for li in ul]
     return {'ld': ld, 'keywords': keywords}
 
 def get_catalog(saam_id):
     data = parse_html(get_html(saam_id))
+    if not data:
+        return {}
     ret = {
         'institution': 'Smithsonian American Art Museum',
     }
