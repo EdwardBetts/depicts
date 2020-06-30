@@ -7,7 +7,6 @@ class Artwork:
 
         sites = ['commons', 'enwiki']
         self.parent_categories = {site: {} for site in sites}
-        self.categories = self.get_categories()
 
     @property
     def image_filename(self):
