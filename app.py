@@ -361,6 +361,9 @@ def existing_depicts_from_entity(entity):
     existing = []
     new_depicts = False
     for claim in entity['claims']['P180']:
+        if 'datavalue' not in claim['mainsnak']:
+            continue
+
         item_id = claim['mainsnak']['datavalue']['value']['numeric-id']
 
         item = DepictsItem.query.get(item_id)
