@@ -67,7 +67,7 @@ def get_entity_with_cache(qid, refresh=False):
     if not refresh and os.path.exists(filename):
         entity = json.load(open(filename))
     else:
-        entity = get_entity(qid)
+        entity = get_entity(qid, redirects=True)
         json.dump(entity, open(filename, 'w'), indent=2)
 
     return entity
