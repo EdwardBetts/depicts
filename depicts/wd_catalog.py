@@ -153,12 +153,15 @@ def check_catalog(entity, catalog):
                 catalog.update(cat)
                 return
 
-        html = get_catalog_url(catalog_url)
-        if html:
-            description = get_description_from_page(html)
-            if description:
-                catalog['description'] = description
-                return
+        try:
+            html = get_catalog_url(catalog_url)
+            if html:
+                description = get_description_from_page(html)
+                if description:
+                    catalog['description'] = description
+                    return
+        except UnicodeDecodeError:
+            return
 
     for property_id in sorted(catalog_ids):
         if property_id == 'P350':
