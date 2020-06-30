@@ -3,7 +3,7 @@ import lxml.html
 import os
 import re
 
-re_url = re.compile(r'^https://www.rijksmuseum.nl/nl/collectie/([^/]+)$')
+re_url = re.compile(r'^https://www.rijksmuseum.nl/(?:nl/collectie|en/collection)/([^/]+)$')
 
 def get_html(catalog_id):
     filename = f'cache/rijksmuseum_{catalog_id}.html'
