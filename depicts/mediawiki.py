@@ -24,6 +24,16 @@ def api_call(params, api_url=wikidata_url):
     r = requests.get(api_url, params=call_params, timeout=5)
     return r
 
+def api_post(params, api_url=wikidata_url):
+    call_params = {
+        'format': 'json',
+        'formatversion': 2,
+        **params,
+    }
+
+    r = requests.post(api_url, data=call_params, timeout=5)
+    return r
+
 def get_list(list_name, **params):
     r = api_call({'action': 'query', 'list': list_name, **params})
     return r.json()['query'][list_name]

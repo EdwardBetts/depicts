@@ -25,7 +25,7 @@ def image_detail(filenames, thumbheight=None, thumbwidth=None):
         call_params = params.copy()
         call_params['titles'] = '|'.join(f'File:{f}' for f in cur)
 
-        r = mediawiki.api_call(call_params, api_url=commons_url)
+        r = mediawiki.api_post(call_params, api_url=commons_url)
 
         for image in r.json()['query']['pages']:
             filename = utils.drop_start(image['title'], 'File:')
