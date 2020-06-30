@@ -154,10 +154,11 @@ def check_catalog(entity, catalog):
                 return
 
         html = get_catalog_url(catalog_url)
-        description = get_description_from_page(html)
-        if description:
-            catalog['description'] = description,
-            return
+        if html:
+            description = get_description_from_page(html)
+            if description:
+                catalog['description'] = description
+                return
 
     for property_id in sorted(catalog_ids):
         if property_id == 'P350':
@@ -208,6 +209,8 @@ def get_catalog_from_artwork(entity):
     return catalog
 
 def get_description_from_page(html):
+    if not html:
+        return
     root = lxml.html.fromstring(html)
     div = root.find('.//div[@itemprop="description"]')
     if div is not None:
