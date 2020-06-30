@@ -25,6 +25,7 @@ import json
 import os
 import locale
 import socket
+import re
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 user_agent = 'Mozilla/5.0 (X11; Linux i586; rv:32.0) Gecko/20160101 Firefox/32.0'
@@ -76,6 +77,9 @@ isa_list = [
     'Q2647254',   # study
     'Q46686'      # reredos
 ]
+
+re_qid = re.compile(r'^Q(\d+)')
+re_pid = re.compile(r'^P(\d+)')
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
@@ -524,11 +528,15 @@ def get_labels_db(keys):
     labels = {}
     missing = set()
     for qid in keys:
-        item = Item.query.get(qid[1:])
-        if item:
-            labels[qid] = item.label
-        else:
-            missing.add(qid)
+        m = re_qid.match(qid)
+        if m:
+            item_id = int(m.group(1))
+            item = Item.query.get(item_id)
+            if item:
+                labels[qid] = item.label
+                continue
+
+        missing.add(qid)
 
     page_size = 50
     try:
@@ -708,8 +716,20 @@ def get_facets(params):
     }
 
 def get_artwork_params():
-    return [(pid, qid) for pid, qid in request.args.items()
-            if pid.startswith('P') and qid.startswith('Q')]
+    params = []
+    for pid, qid in request.args.items():
+        m = re_pid.match(pid)
+
+        if not m:
+            continue
+        pid = m.group(0)
+
+        m = re_qid.match(qid)
+        if not m:
+            continue
+        qid = m.group(0)
+        params.append((pid, qid))
+    return params
 
 def filter_artwork(params):
     return wdqs.run_from_template_with_cache('query/find_more.sparql',
