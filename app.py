@@ -397,6 +397,10 @@ def item_page(item_id):
     from_redirect = qid in session and session.pop(qid) == 'from redirect'
     entity = mediawiki.get_entity_with_cache(qid, refresh=not from_redirect)
 
+    if 'redirects' in entity:
+        redirect_to_item_id = int(entity['redirects']['to'][1:])
+        return redirect(url_for(request.endpoint, item_id=redirect_to_item_id))
+
     existing_depicts = existing_depicts_from_entity(entity)
 
     width = 800
