@@ -171,6 +171,8 @@ def check_catalog(entity, catalog):
             html = get_catalog_page(property_id, value)
         except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
             continue  # ignore this error
+        if not html:
+            continue
         description = get_description_from_page(html)
         if not description:
             continue
