@@ -799,9 +799,13 @@ def get_image_detail_with_cache(items, cache_name, thumbwidth=None, refresh=Fals
 
     filename = f'cache/{cache_name}_images.json'
     cache_exists = os.path.exists(filename)
+    detail = None
     if not refresh and cache_exists:
-        detail = json.load(open(filename))
-    else:
+        try:
+            detail = json.load(open(filename))
+        except json.decoder.JSONDecodeError:
+            pass
+    if not detail:
         try:
             detail = commons.image_detail(filenames, thumbwidth=thumbwidth)
             json.dump(detail, open(filename, 'w'), indent=2)
