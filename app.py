@@ -1072,6 +1072,8 @@ def depicts_lookup():
 
     for alt in q2:
         item = alt.item
+        if item.count is None:
+            continue
         hit = {
             'label': item.label,
             'description': item.description,
