@@ -39,7 +39,7 @@ def from_name(name):
 
     found = []
     for entity in mediawiki.get_entities_with_cache(qids, props='labels|descriptions'):
-        if 'redirects' in entity:
+        if 'redirects' in entity or 'missing' in entity:
             continue
         qid = entity['id']
         item = lookup[qid]
@@ -51,7 +51,7 @@ def from_name(name):
         label = wikibase.get_entity_label(entity)
         if label:
             i['label'] = label
-        if 'en' in entity['descriptions']:
+        if 'en' in entity.get('descriptions', {}):
             i['description'] = entity['descriptions']['en']['value']
         found.append(i)
     found.sort(key=lambda i: i.get('label', ''))
